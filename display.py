@@ -1,0 +1,140 @@
+# display.py — all rendering logic; stateless given a BoutState + current time
+
+import math
+import pygame
+import config
+from state import BoutState
+
+
+# ---------------------------------------------------------------------------
+# Font cache — loaded once after pygame.init()
+# ---------------------------------------------------------------------------
+_fonts: dict = {}
+
+
+def load_fonts():
+    """Call once after pygame.init() to populate the font cache."""
+    _fonts["score"]  = pygame.font.SysFont("Arial", config.SCORE_FONT_SIZE, bold=True)
+    _fonts["clock"]  = pygame.font.SysFont("Arial", config.CLOCK_FONT_SIZE, bold=True)
+    _fonts["delta"]  = pygame.font.SysFont("Arial", config.DELTA_FONT_SIZE)
+
+
+# ---------------------------------------------------------------------------
+# Helper: scale a fraction-based coordinate to actual pixels
+# ---------------------------------------------------------------------------
+def _px(frac_x: float, frac_y: float, w: int, h: int) -> tuple[int, int]:
+    return int(frac_x * w), int(frac_y * h)
+
+
+# ---------------------------------------------------------------------------
+# Individual drawing helpers
+# ---------------------------------------------------------------------------
+
+def _draw_score(surface: pygame.Surface, score: int, x: int, y: int, color):
+    text = _fonts["score"].render(str(score), True, color)
+    rect = text.get_rect(center=(x, y))
+    surface.blit(text, rect)
+
+
+def _draw_clock(surface: pygame.Surface, seconds: float, x: int, y: int):
+    total = max(0, int(seconds))
+    mm, ss = divmod(total, 60)
+    text = _fonts["clock"].render(f"{mm:02d}:{ss:02d}", True, config.CLOCK_COLOR)
+    rect = text.get_rect(center=(x, y))
+    surface.blit(text, rect)
+
+
+def _draw_delta(surface: pygame.Surface, delta_ms: int, cx: int, y: int, w: int, h: int):
+    """Draw the Δt label, millisecond value, and pie-chart circle."""
+    # Text
+    label = _fonts["delta"].render(f"Δt  {delta_ms} ms", True, config.DELTA_COLOR)
+    rect  = label.get_rect(center=(cx, y))
+    surface.blit(label, rect)
+
+    # Pie chart — centered below the delta text, shifted down by half a radius
+    pie_cx = cx
+    pie_cy = int(config.PIE_CENTER_Y_FRAC * h) + config.PIE_RADIUS // 2
+    r      = config.PIE_RADIUS
+    frac   = min(delta_ms / config.HIT_WINDOW_MS, 1.0)
+
+    # Background circle
+    pygame.draw.circle(surface, config.DARK_GRAY, (pie_cx, pie_cy), r)
+    pygame.draw.circle(surface, config.GRAY, (pie_cx, pie_cy), r, 2)
+
+    if frac > 0:
+        # pygame.draw.arc uses start/stop in radians measured CCW from 3 o'clock.
+        # We want CW from 12 o'clock, so: start = π/2 − angle, stop = π/2
+        angle_rad = frac * 2 * math.pi
+        arc_rect  = pygame.Rect(pie_cx - r, pie_cy - r, r * 2, r * 2)
+        start     = math.pi / 2 - angle_rad
+        stop      = math.pi / 2
+        # Fill wedge with a polygon
+        steps  = max(3, int(angle_rad * r))
+        points = [(pie_cx, pie_cy)]
+        for i in range(steps + 1):
+            a = math.pi / 2 - (angle_rad * i / steps)
+            points.append((
+                pie_cx + r * math.cos(a),
+                pie_cy - r * math.sin(a),
+            ))
+        if len(points) >= 3:
+            pygame.draw.polygon(surface, config.DELTA_COLOR, points)
+        # Redraw outline on top
+        pygame.draw.circle(surface, config.GRAY, (pie_cx, pie_cy), r, 2)
+
+
+def _draw_indicator_bar(surface: pygame.Surface, cx: int, cy: int, w: int, h: int, color):
+    rect = pygame.Rect(cx - w // 2, cy - h // 2, w, h)
+    pygame.draw.rect(surface, color, rect, border_radius=8)
+
+
+def _draw_indicators(surface: pygame.Surface, state: BoutState, now_ms: int, sw: int, sh: int):
+    bar_w = int(config.INDICATOR_W_FRAC * sw)
+    bar_h = int(config.INDICATOR_H_FRAC * sh)
+    ind_y = int(config.INDICATOR_Y_FRAC * sh)
+
+    left_cx  = int(config.LEFT_SCORE_X_FRAC  * sw)
+    right_cx = int(config.RIGHT_SCORE_X_FRAC * sw)
+
+    # On-target bars — both sides share a single window; they extinguish together
+    window_open   = (state.hit_window_start is not None and
+                     (now_ms - state.hit_window_start) < config.HIT_INDICATOR_DURATION_MS)
+    left_on_color  = config.RED_BRIGHT   if (window_open and state.hit_left_active)  else config.RED_DIM
+    right_on_color = config.GREEN_BRIGHT if (window_open and state.hit_right_active) else config.GREEN_DIM
+    _draw_indicator_bar(surface, left_cx,  ind_y, bar_w, bar_h, left_on_color)
+    _draw_indicator_bar(surface, right_cx, ind_y, bar_w, bar_h, right_on_color)
+
+    # Off-target bars — share the same window; extinguish simultaneously with on-target bars
+    white_y = ind_y - bar_h - 10
+    left_white_color  = config.YELLOW_BRIGHT if (window_open and state.white_left_active)  else config.YELLOW_DIM
+    right_white_color = config.YELLOW_BRIGHT if (window_open and state.white_right_active) else config.YELLOW_DIM
+    _draw_indicator_bar(surface, left_cx,  white_y, bar_w, bar_h // 2, left_white_color)
+    _draw_indicator_bar(surface, right_cx, white_y, bar_w, bar_h // 2, right_white_color)
+
+
+# ---------------------------------------------------------------------------
+# Public render function
+# ---------------------------------------------------------------------------
+
+def render(surface: pygame.Surface, state: BoutState, now_ms: int):
+    sw, sh = surface.get_size()
+    surface.fill(config.BLACK)
+
+    score_y  = int(config.SCORE_Y_FRAC      * sh)
+    left_cx  = int(config.LEFT_SCORE_X_FRAC * sw)
+    right_cx = int(config.RIGHT_SCORE_X_FRAC * sw)
+
+    _draw_score(surface, state.score_left,  left_cx,  score_y, config.RED_BRIGHT)
+    _draw_score(surface, state.score_right, right_cx, score_y, config.GREEN_BRIGHT)
+
+    # Clock
+    clock_x, clock_y = _px(config.CLOCK_X_FRAC, config.CLOCK_Y_FRAC, sw, sh)
+    _draw_clock(surface, state.clock_seconds, clock_x, clock_y)
+
+    # Delta + pie chart (only when data is present)
+    if state.delta_ms is not None:
+        delta_y = int(config.DELTA_Y_FRAC * sh)
+        _draw_delta(surface, state.delta_ms, clock_x, delta_y, sw, sh)
+
+    # Hit indicator bars
+    _draw_indicators(surface, state, now_ms, sw, sh)
