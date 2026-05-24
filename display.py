@@ -92,8 +92,8 @@ def _draw_delta(surface: pygame.Surface, delta_ms: int, first_left,
         # Redraw outline on top
         pygame.draw.circle(surface, config.GRAY, (pie_cx, pie_cy), r, 2)
 
-    # Arrow below pie indicating which fencer hit first
-    if first_left is not None:
+    # Arrow below pie indicating which fencer hit first (suppressed for simultaneous hits)
+    if first_left is not None and delta_ms > 0:
         arrow_hw  = r // 2        # half-width of arrow base
         arrow_hh  = r // 3        # half-height of arrow base
         arrow_gap = 10
