@@ -96,11 +96,21 @@ def _open_hit_window(state: BoutState, now_ms: int):
 def apply_command(opcode: int, payload, state: BoutState,
                   audio_mgr: audio.AudioManager, detector: DisconnectDetector, now_ms: int):
     if opcode == opcodes.OP_SCORE_LEFT_INC:
-        state.score_left  = max(0, state.score_left  + 1)
+        state.score_left = max(0, state.score_left + 1)
+        if state.score_left == config.BOUT_WIN_SCORE:
+            audio_mgr.play_winner_left()
+            state.winner_reset_at = now_ms + config.WINNER_RESET_DELAY_MS
+        else:
+            audio_mgr.play_point_left()
     elif opcode == opcodes.OP_SCORE_LEFT_DEC:
         state.score_left  = max(0, state.score_left  - 1)
     elif opcode == opcodes.OP_SCORE_RIGHT_INC:
         state.score_right = max(0, state.score_right + 1)
+        if state.score_right == config.BOUT_WIN_SCORE:
+            audio_mgr.play_winner_right()
+            state.winner_reset_at = now_ms + config.WINNER_RESET_DELAY_MS
+        else:
+            audio_mgr.play_point_right()
     elif opcode == opcodes.OP_SCORE_RIGHT_DEC:
         state.score_right = max(0, state.score_right - 1)
     elif opcode == opcodes.OP_SCORE_RESET:
@@ -275,6 +285,12 @@ def main():
                 (now_ms - state.delta_set_time) >= config.DELTA_DISPLAY_MS):
             state.delta_ms       = None
             state.delta_set_time = None
+            dirty = True
+
+        # Auto-reset scores after winner fanfare delay
+        if state.winner_reset_at is not None and now_ms >= state.winner_reset_at:
+            state.reset_scores()
+            state.reset_indicators()
             dirty = True
 
         # Render only when something visible has changed

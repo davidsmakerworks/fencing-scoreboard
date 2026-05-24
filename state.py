@@ -29,15 +29,20 @@ class BoutState:
     clock_running:   bool  = False
     clock_seconds:   float = 180.0   # counts down
 
+    # Bout winner — set to the ticks at which scores should auto-reset after a win
+    winner_reset_at: Optional[int] = None
+
     def reset_scores(self):
-        self.score_left  = 0
-        self.score_right = 0
+        self.score_left      = 0
+        self.score_right     = 0
+        self.winner_reset_at = None
 
     def reset_indicators(self):
-        self.hit_window_start  = None
-        self.hit_left_active   = False
-        self.hit_right_active  = False
+        self.hit_window_start   = None
+        self.hit_left_active    = False
+        self.hit_right_active   = False
         self.white_left_active  = False
         self.white_right_active = False
-        self.delta_ms          = None
-        self.delta_set_time    = None
+        self.delta_ms           = None
+        self.delta_set_time     = None
+        self.winner_reset_at    = None

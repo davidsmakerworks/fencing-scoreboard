@@ -47,6 +47,10 @@ INDICATOR_Y_FRAC   = _c["layout"]["indicator_y_frac"]
 PIE_RADIUS         = _c["layout"]["pie_radius"]
 PIE_CENTER_Y_FRAC  = _c["layout"]["pie_center_y_frac"]
 
+# --- Game ---
+BOUT_WIN_SCORE        = _c["game"]["bout_win_score"]
+WINNER_RESET_DELAY_MS = _c["game"]["winner_reset_delay_ms"]
+
 # --- Timing ---
 HIT_WINDOW_MS             = _c["timing"]["hit_window_ms"]
 HIT_INDICATOR_DURATION_MS = _c["timing"]["hit_indicator_duration_ms"]
@@ -64,8 +68,14 @@ MIXER_BUFFER         = _c["audio"]["mixer_buffer"]
 SOUND_HIT_ON_TARGET  = _c["audio"]["hit_on_target_file"]
 SOUND_HIT_OFF_TARGET = _c["audio"]["hit_off_target_file"]
 SOUND_RESET          = _c["audio"]["reset_file"]
+SOUND_WINNER_LEFT    = _c["audio"]["winner_left_file"]
+SOUND_WINNER_RIGHT   = _c["audio"]["winner_right_file"]
+SOUND_POINT_LEFT     = _c["audio"]["point_left_file"]
+SOUND_POINT_RIGHT    = _c["audio"]["point_right_file"]
 
-# Tone settings used when WAV files are absent (frequency Hz, duration ms)
+# Tone settings used when WAV files are absent
 TONE_HIT_ON_TARGET  = _c["audio"]["tones"]["hit_on_target"]
 TONE_HIT_OFF_TARGET = _c["audio"]["tones"]["hit_off_target"]
 TONE_RESET          = _c["audio"]["tones"]["reset"]
+TONE_WINNER         = _c["audio"]["tones"]["winner"]
+TONE_POINT          = _c["audio"]["tones"]["point"]
