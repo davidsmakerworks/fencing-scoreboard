@@ -178,6 +178,9 @@ def main():
     clock = pygame.time.Clock()
     last_ticks = pygame.time.get_ticks()
 
+    dirty = True           # force an initial render on startup
+    was_window_active = False
+
     # --- Main loop ---
     running = True
     while running:
@@ -203,16 +206,29 @@ def main():
             except queue.Empty:
                 break
             apply_command(opcode, payload, state, audio_mgr, now_ms)
+            dirty = True
 
-        # Tick the clock
+        # Tick the clock — only dirty when the displayed MM:SS value changes
         if state.clock_running and state.clock_seconds > 0:
+            prev_int = int(state.clock_seconds)
             state.clock_seconds = max(0.0, state.clock_seconds - dt_s)
             if state.clock_seconds == 0.0:
                 state.clock_running = False
+            if int(state.clock_seconds) != prev_int:
+                dirty = True
 
-        # Render
-        display.render(screen, state, now_ms)
-        pygame.display.flip()
+        # Detect hit window expiry — need one more render when indicators go dark
+        is_window_active = _window_active(state, now_ms)
+        if was_window_active and not is_window_active:
+            dirty = True
+        was_window_active = is_window_active
+
+        # Render only when something visible has changed
+        if dirty:
+            display.render(screen, state, now_ms)
+            pygame.display.flip()
+            dirty = False
+
         clock.tick(config.FPS)
 
     pygame.quit()

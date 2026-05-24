@@ -2,7 +2,7 @@
   "screen": {
     "width": 1280,
     "height": 720,
-    "fps": 15
+    "fps": 30
   },
 
   "colors": {
@@ -46,8 +46,8 @@
   },
 
   "serial": {
-    "default_port": "COM3",
-    "default_baud": 115200
+    "default_port": "/dev/ttyUSB0",
+    "default_baud": 19200
   },
 
   "audio": {
