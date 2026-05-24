@@ -56,8 +56,9 @@ def _draw_clock(surface: pygame.Surface, seconds: float, x: int, y: int):
     surface.blit(text, rect)
 
 
-def _draw_delta(surface: pygame.Surface, delta_ms: int, cx: int, y: int, w: int, h: int):
-    """Draw the Δt label, millisecond value, and pie-chart circle."""
+def _draw_delta(surface: pygame.Surface, delta_ms: int, first_left,
+                cx: int, y: int, w: int, h: int):
+    """Draw the Δt label, millisecond value, pie-chart circle, and first-hit arrow."""
     # Text
     label = _render_cached("delta", f"Δt  {delta_ms} ms", config.DELTA_COLOR)
     rect  = label.get_rect(center=(cx, y))
@@ -77,9 +78,6 @@ def _draw_delta(surface: pygame.Surface, delta_ms: int, cx: int, y: int, w: int,
         # pygame.draw.arc uses start/stop in radians measured CCW from 3 o'clock.
         # We want CW from 12 o'clock, so: start = π/2 − angle, stop = π/2
         angle_rad = frac * 2 * math.pi
-        arc_rect  = pygame.Rect(pie_cx - r, pie_cy - r, r * 2, r * 2)
-        start     = math.pi / 2 - angle_rad
-        stop      = math.pi / 2
         # Fill wedge with a polygon
         steps  = max(3, int(angle_rad * r))
         points = [(pie_cx, pie_cy)]
@@ -93,6 +91,28 @@ def _draw_delta(surface: pygame.Surface, delta_ms: int, cx: int, y: int, w: int,
             pygame.draw.polygon(surface, config.DELTA_COLOR, points)
         # Redraw outline on top
         pygame.draw.circle(surface, config.GRAY, (pie_cx, pie_cy), r, 2)
+
+    # Arrow below pie indicating which fencer hit first
+    if first_left is not None:
+        arrow_hw  = r // 2        # half-width of arrow base
+        arrow_hh  = r // 3        # half-height of arrow base
+        arrow_gap = 10
+        arrow_cy  = pie_cy + r + arrow_gap + arrow_hh
+        if first_left:
+            color  = config.RED_BRIGHT
+            points = [
+                (pie_cx - arrow_hw, arrow_cy),            # tip (left)
+                (pie_cx + arrow_hw, arrow_cy - arrow_hh), # top-right
+                (pie_cx + arrow_hw, arrow_cy + arrow_hh), # bottom-right
+            ]
+        else:
+            color  = config.GREEN_BRIGHT
+            points = [
+                (pie_cx + arrow_hw, arrow_cy),            # tip (right)
+                (pie_cx - arrow_hw, arrow_cy - arrow_hh), # top-left
+                (pie_cx - arrow_hw, arrow_cy + arrow_hh), # bottom-left
+            ]
+        pygame.draw.polygon(surface, color, points)
 
 
 def _draw_indicator_bar(surface: pygame.Surface, cx: int, cy: int, w: int, h: int, color):
@@ -146,7 +166,7 @@ def render(surface: pygame.Surface, state: BoutState, now_ms: int):
     # Delta + pie chart (only when data is present)
     if state.delta_ms is not None:
         delta_y = int(config.DELTA_Y_FRAC * sh)
-        _draw_delta(surface, state.delta_ms, clock_x, delta_y, sw, sh)
+        _draw_delta(surface, state.delta_ms, state.delta_first_left, clock_x, delta_y, sw, sh)
 
     # Hit indicator bars
     _draw_indicators(surface, state, now_ms, sw, sh)

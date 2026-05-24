@@ -68,14 +68,18 @@ MIXER_BUFFER         = _c["audio"]["mixer_buffer"]
 SOUND_HIT_ON_TARGET  = _c["audio"]["hit_on_target_file"]
 SOUND_HIT_OFF_TARGET = _c["audio"]["hit_off_target_file"]
 SOUND_RESET          = _c["audio"]["reset_file"]
-SOUND_WINNER_LEFT    = _c["audio"]["winner_left_file"]
-SOUND_WINNER_RIGHT   = _c["audio"]["winner_right_file"]
-SOUND_POINT_LEFT     = _c["audio"]["point_left_file"]
-SOUND_POINT_RIGHT    = _c["audio"]["point_right_file"]
+SOUND_TOUCH_LEFT     = _c["audio"]["touch_left_file"]
+SOUND_TOUCH_RIGHT    = _c["audio"]["touch_right_file"]
 
-# Tone settings used when WAV files are absent
+# Tone fallbacks when WAV files are absent
 TONE_HIT_ON_TARGET  = _c["audio"]["tones"]["hit_on_target"]
 TONE_HIT_OFF_TARGET = _c["audio"]["tones"]["hit_off_target"]
 TONE_RESET          = _c["audio"]["tones"]["reset"]
-TONE_WINNER         = _c["audio"]["tones"]["winner"]
-TONE_POINT          = _c["audio"]["tones"]["point"]
+TONE_TOUCH          = _c["audio"]["tones"]["touch"]
+
+# Announcement speech-cadence gaps (ms)
+ANNOUNCE_GAP_AFTER_TOUCH       = _c["audio"]["announcement"]["gap_after_touch_ms"]
+ANNOUNCE_GAP_BETWEEN_WORDS     = _c["audio"]["announcement"]["gap_between_words_ms"]
+ANNOUNCE_GAP_BETWEEN_SCORES    = _c["audio"]["announcement"]["gap_between_scores_ms"]
+ANNOUNCE_GAP_SCORE_TO_ALL      = _c["audio"]["announcement"]["gap_score_to_all_ms"]
+ANNOUNCE_GAP_AFTER_WINNER_NAME = _c["audio"]["announcement"]["gap_after_winner_name_ms"]

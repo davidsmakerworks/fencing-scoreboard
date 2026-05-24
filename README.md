@@ -83,14 +83,14 @@ no recompilation is needed to change settings.
 ### `game`
 | Key | Default | Description |
 |-----|---------|-------------|
-| `bout_win_score` | 5 | Score that triggers the winner fanfare and auto-reset |
-| `winner_reset_delay_ms` | 5000 | Delay after the winner fanfare before scores are reset to zero (ms) |
+| `bout_win_score` | 5 | Score that triggers the winner announcement and auto-reset |
+| `winner_reset_delay_ms` | 5000 | Minimum delay after the winner announcement before scores are reset to zero (ms); actual reset waits until the announcement finishes if longer |
 
 ### `timing`
 | Key | Default | Description |
 |-----|---------|-------------|
 | `hit_indicator_duration_ms` | 2500 | How long hit indicators stay lit after a hit signal (ms) |
-| `hit_window_ms` | 300 | Reference window for the double-hit pie-chart visualisation (ms) |
+| `hit_window_ms` | 300 | Reference window for the double-hit pie-chart visualisation — a full wedge represents this duration (ms) |
 | `delta_display_ms` | 10000 | How long the Δt reading stays on screen before auto-clearing (ms) |
 | `disconnect_hit_count` | 3 | Number of hit signals within `disconnect_window_ms` that triggers buzzer mute |
 | `disconnect_window_ms` | 12500 | Rolling window for disconnect detection (ms) |
@@ -99,19 +99,25 @@ no recompilation is needed to change settings.
 ### `audio`
 | Key | Description |
 |-----|-------------|
-| `hit_on_target_file` | WAV played on an on-target hit |
-| `hit_off_target_file` | WAV played on an off-target (white) hit |
+| `hit_on_target_file` | WAV played immediately on an on-target hit |
+| `hit_off_target_file` | WAV played immediately on an off-target (white) hit |
 | `reset_file` | WAV played on score reset |
-| `winner_left_file` | WAV played when the left (red) fencer wins the bout |
-| `winner_right_file` | WAV played when the right (green) fencer wins the bout |
-| `point_left_file` | WAV played when the left fencer scores a point |
-| `point_right_file` | WAV played when the right fencer scores a point |
+| `touch_left_file` | Touch call played at the start of a point or winner announcement for the left (red) fencer |
+| `touch_right_file` | Touch call played at the start of a point or winner announcement for the right (green) fencer |
 | `mixer_buffer` | SDL audio buffer size in samples (increase if audio crackles; 2048 recommended for Pi) |
 | `tones.hit_on_target` | Fallback tone `{frequency, duration_ms}` when WAV is absent |
 | `tones.hit_off_target` | Fallback tone `{frequency, duration_ms}` when WAV is absent |
 | `tones.reset` | Fallback tone `{frequency, duration_ms}` when WAV is absent |
-| `tones.winner` | Fallback sequence `{notes, repeats}` when WAV is absent — each note is `{frequency, duration_ms}`; `frequency: 0` is silence |
-| `tones.point` | Fallback sequence `{notes}` when WAV is absent |
+| `tones.touch` | Fallback sequence `{notes}` when touch WAV is absent — each note is `{frequency, duration_ms}` |
+
+#### `audio.announcement` — speech-cadence gaps
+| Key | Default | Description |
+|-----|---------|-------------|
+| `gap_after_touch_ms` | 750 | Pause after the touch call before "the score is" / "the winner is" |
+| `gap_between_words_ms` | 200 | Pause between individual phrase words (e.g., between "the score is" and the first number) |
+| `gap_between_scores_ms` | 200 | Pause between the two score numbers when scores differ |
+| `gap_score_to_all_ms` | 100 | Shorter pause before "all" when scores are tied |
+| `gap_after_winner_name_ms` | 400 | Pause after the fencer name before "the final score is" |
 
 ### `layout`, `fonts`, `colors`
 Fractional screen-position values, font sizes, and RGB color tuples.
@@ -122,22 +128,78 @@ scales automatically when `width`/`height` change.
 
 ## Audio
 
-Place WAV files in the `sounds/` directory:
+### Immediate sounds
+These files play instantly on the corresponding event:
 
 | File | Played when |
 |------|-------------|
 | `sounds/hit_on_target.wav`  | On-target hit (left, right, or both) |
 | `sounds/hit_off_target.wav` | Off-target (white) hit |
 | `sounds/reset.wav`          | Score reset |
-| `sounds/winner_left.wav`    | Left (red) fencer reaches the winning score |
-| `sounds/winner_right.wav`   | Right (green) fencer reaches the winning score |
-| `sounds/point_left.wav`     | Left fencer scores a point (below the winning score) |
-| `sounds/point_right.wav`    | Right fencer scores a point (below the winning score) |
 
-If a WAV file is missing, a synthesised fallback is generated automatically
-using `numpy`. Simple tones use `{frequency, duration_ms}`; the winner fanfare
-uses a configurable multi-note sequence with optional silence and a repeat
-count — all defined under `audio.tones` in `config.json`.
+### Announcement sounds
+These files are sequenced automatically by the announcement system.
+All files should be mono WAV, 44100 Hz, 16-bit.
+
+**Touch calls** (played at the start of every point/winner announcement):
+
+| File | Used when |
+|------|-----------|
+| `sounds/touch_left.wav`  | Left (red) fencer scores or wins |
+| `sounds/touch_right.wav` | Right (green) fencer scores or wins |
+
+**Phrase files** (fixed words strung together per announcement):
+
+| File | Content |
+|------|---------|
+| `sounds/the_score_is.wav`       | "The score is" |
+| `sounds/the_final_score_is.wav` | "The final score is" |
+| `sounds/the_winner_is.wav`      | "The winner is" |
+| `sounds/the_fencer_to_my_left.wav`  | "The fencer to my left" |
+| `sounds/the_fencer_to_my_right.wav` | "The fencer to my right" |
+| `sounds/all.wav`                | "All" (used for tied scores, e.g., "three all") |
+
+**Number files** (one per score value, 0–15):
+
+| Files |
+|-------|
+| `sounds/zero.wav` … `sounds/fifteen.wav` |
+
+If a touch WAV file is missing, a synthesised two-tone sequence is used as a fallback
+(configurable under `audio.tones.touch` in `config.json`).
+If any phrase or number WAV file is missing, that item is silently skipped in the
+announcement sequence.
+
+---
+
+## Scoring and bout winner
+
+### Point announcement
+When a fencer scores a point below the winning score, the following sequence plays:
+
+1. Touch call (`touch_left.wav` or `touch_right.wav`)
+2. Pause (`gap_after_touch_ms`)
+3. "The score is" (`the_score_is.wav`)
+4. Brief pause (`gap_between_words_ms`)
+5. Score of the fencer who scored (called first, regardless of which is higher)
+6. Either: pause + other fencer's score (`gap_between_scores_ms`) — or — shorter pause + "all" (`gap_score_to_all_ms`) if tied
+
+### Winner announcement
+When a fencer's score reaches `bout_win_score` (default 5):
+
+1. Touch call (`touch_left.wav` or `touch_right.wav`)
+2. Pause (`gap_after_touch_ms`)
+3. "The winner is" (`the_winner_is.wav`)
+4. Brief pause (`gap_between_words_ms`)
+5. Fencer name (`the_fencer_to_my_left.wav` or `the_fencer_to_my_right.wav`)
+6. Pause (`gap_after_winner_name_ms`)
+7. "The final score is" (`the_final_score_is.wav`)
+8. Brief pause (`gap_between_words_ms`)
+9. Winner's score, then loser's score (same cadence as point announcement)
+
+After the full announcement finishes (plus a 1-second buffer), both scores are
+automatically reset to zero and all indicators are cleared.
+A manual `SCORE_RESET` opcode cancels any pending auto-reset immediately.
 
 ---
 
@@ -191,6 +253,25 @@ configurable in `config.json` under `timing`.
 
 ---
 
+## Double-hit delta display
+
+When the hardware sends a `DELTA_TIME` opcode, the centre of the screen shows:
+
+- The numeric Δt value in milliseconds
+- A pie-chart wedge whose filled arc represents the delta as a fraction of
+  `hit_window_ms` (a full circle = at or beyond the reference window)
+- A filled arrow below the pie chart indicating which fencer's hit was received
+  first:
+  - **Bright red, pointing left** — the left (red) fencer hit first
+  - **Bright green, pointing right** — the right (green) fencer hit first
+  - No arrow — both hits were simultaneous (`HIT_BOTH` opcode)
+
+The display clears automatically after `delta_display_ms` (default 10 seconds).
+A new `DELTA_TIME` opcode before that time replaces the display and resets the
+timer.
+
+---
+
 ## Hit indicator behaviour
 
 - The **first** hit signal in an exchange lights the appropriate indicator(s)
@@ -201,18 +282,6 @@ configurable in `config.json` under `timing`.
   a single display window and extinguish simultaneously when it expires.
 - For each side, only one of on-target or off-target can be active at a time
   (enforced by the hardware module).
-
----
-
-## Scoring and bout winner
-
-- When a fencer scores a point below the winning score, the corresponding
-  `point_left.wav` or `point_right.wav` is played.
-- When a fencer's score reaches `bout_win_score` (default 5), the winner
-  fanfare (`winner_left.wav` / `winner_right.wav`) plays instead.
-- After `winner_reset_delay_ms` (default 5 000 ms) both scores are
-  automatically reset to zero and all indicators are cleared.
-- A manual `SCORE_RESET` opcode cancels any pending auto-reset immediately.
 
 ---
 
@@ -236,7 +305,7 @@ display.py       — all rendering (driven by BoutState; only redraws on change)
 state.py         — BoutState dataclass (single source of truth)
 config.py        — loads config.json and exposes values as module-level names
 opcodes.py       — serial protocol constants (firmware-matched hex values)
-audio.py         — sound loading and playback helpers
+audio.py         — sound loading, tone generation, and announcement scheduling
 config.json      — all tuneable configuration
 sounds/          — WAV files (synthesised tones used as fallback if absent)
 requirements.txt

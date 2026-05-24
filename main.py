@@ -98,19 +98,23 @@ def apply_command(opcode: int, payload, state: BoutState,
     if opcode == opcodes.OP_SCORE_LEFT_INC:
         state.score_left = max(0, state.score_left + 1)
         if state.score_left == config.BOUT_WIN_SCORE:
-            audio_mgr.play_winner_left()
-            state.winner_reset_at = now_ms + config.WINNER_RESET_DELAY_MS
+            suggested = audio_mgr.schedule_winner_announcement(
+                True, state.score_left, state.score_right, now_ms)
+            state.winner_reset_at = max(now_ms + config.WINNER_RESET_DELAY_MS, suggested)
         else:
-            audio_mgr.play_point_left()
+            audio_mgr.schedule_point_announcement(
+                True, state.score_left, state.score_right, now_ms)
     elif opcode == opcodes.OP_SCORE_LEFT_DEC:
         state.score_left  = max(0, state.score_left  - 1)
     elif opcode == opcodes.OP_SCORE_RIGHT_INC:
         state.score_right = max(0, state.score_right + 1)
         if state.score_right == config.BOUT_WIN_SCORE:
-            audio_mgr.play_winner_right()
-            state.winner_reset_at = now_ms + config.WINNER_RESET_DELAY_MS
+            suggested = audio_mgr.schedule_winner_announcement(
+                False, state.score_right, state.score_left, now_ms)
+            state.winner_reset_at = max(now_ms + config.WINNER_RESET_DELAY_MS, suggested)
         else:
-            audio_mgr.play_point_right()
+            audio_mgr.schedule_point_announcement(
+                False, state.score_right, state.score_left, now_ms)
     elif opcode == opcodes.OP_SCORE_RIGHT_DEC:
         state.score_right = max(0, state.score_right - 1)
     elif opcode == opcodes.OP_SCORE_RESET:
@@ -122,6 +126,7 @@ def apply_command(opcode: int, payload, state: BoutState,
         first_hit = not _window_active(state, now_ms)
         if first_hit:
             _open_hit_window(state, now_ms)
+            state.delta_first_left = True
         state.hit_left_active = True
         if first_hit and not detector.muted:
             audio_mgr.play_hit_on_target()
@@ -131,6 +136,7 @@ def apply_command(opcode: int, payload, state: BoutState,
         first_hit = not _window_active(state, now_ms)
         if first_hit:
             _open_hit_window(state, now_ms)
+            state.delta_first_left = False
         state.hit_right_active = True
         if first_hit and not detector.muted:
             audio_mgr.play_hit_on_target()
@@ -140,6 +146,7 @@ def apply_command(opcode: int, payload, state: BoutState,
         first_hit = not _window_active(state, now_ms)
         if first_hit:
             _open_hit_window(state, now_ms)
+            state.delta_first_left = None  # simultaneous — no meaningful first fencer
         state.hit_left_active  = True
         state.hit_right_active = True
         if first_hit and not detector.muted:
@@ -150,6 +157,7 @@ def apply_command(opcode: int, payload, state: BoutState,
         first_hit = not _window_active(state, now_ms)
         if first_hit:
             _open_hit_window(state, now_ms)
+            state.delta_first_left = True
         state.white_left_active = True
         if first_hit and not detector.muted:
             audio_mgr.play_hit_off_target()
@@ -159,6 +167,7 @@ def apply_command(opcode: int, payload, state: BoutState,
         first_hit = not _window_active(state, now_ms)
         if first_hit:
             _open_hit_window(state, now_ms)
+            state.delta_first_left = False
         state.white_right_active = True
         if first_hit and not detector.muted:
             audio_mgr.play_hit_off_target()
@@ -273,6 +282,9 @@ def main():
 
         # Update disconnect detector (checks silence period, clears mute if elapsed)
         detector.update(now_ms)
+
+        # Play any queued announcement phrases that are due
+        audio_mgr.update_announcements(now_ms)
 
         # Detect hit window expiry — need one more render when indicators go dark
         is_window_active = _window_active(state, now_ms)

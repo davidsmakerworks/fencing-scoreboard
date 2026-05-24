@@ -1,44 +1,46 @@
-# audio.py — sound loading and playback helpers
+# audio.py — sound loading, tone generation, and announcement scheduling
 
 import os
+import logging
+from pathlib import Path
 import pygame
 import config
 
+log = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Low-level generation helpers
+# ---------------------------------------------------------------------------
 
 def _generate_tone(frequency: int, duration_ms: int, volume: float = 0.6) -> pygame.mixer.Sound:
-    """Synthesise a single sine-wave tone."""
+    """Synthesise a mono sine-wave tone (pygame upmixes to both speakers at playback)."""
     import numpy as np
     sample_rate = 44100
     n_samples   = int(sample_rate * duration_ms / 1000)
     t           = np.linspace(0, duration_ms / 1000, n_samples, endpoint=False)
     wave        = (np.sin(2 * np.pi * frequency * t) * volume * 32767).astype(np.int16)
-    stereo = np.column_stack([wave, wave])
-    return pygame.sndarray.make_sound(stereo)
+    return pygame.sndarray.make_sound(wave)
 
 
 def _generate_sequence(notes: list, repeats: int = 1, volume: float = 0.6) -> pygame.mixer.Sound:
     """
-    Synthesise a multi-note sequence as a single Sound buffer.
-    Each entry in *notes* is {"frequency": Hz, "duration_ms": ms}.
-    frequency=0 produces silence.  The whole pattern is repeated *repeats* times.
+    Synthesise a mono multi-note sequence as a single Sound buffer.
+    Each note: {"frequency": Hz, "duration_ms": ms}. frequency=0 = silence.
     """
     import numpy as np
     sample_rate = 44100
     buffers = []
     for _ in range(repeats):
         for note in notes:
-            freq   = note["frequency"]
-            dur_ms = note["duration_ms"]
-            n      = int(sample_rate * dur_ms / 1000)
+            freq, dur_ms = note["frequency"], note["duration_ms"]
+            n = int(sample_rate * dur_ms / 1000)
             if freq == 0:
                 buffers.append(np.zeros(n, dtype=np.int16))
             else:
                 t    = np.linspace(0, dur_ms / 1000, n, endpoint=False)
                 wave = (np.sin(2 * np.pi * freq * t) * volume * 32767).astype(np.int16)
                 buffers.append(wave)
-    full   = np.concatenate(buffers)
-    stereo = np.column_stack([full, full])
-    return pygame.sndarray.make_sound(stereo)
+    return pygame.sndarray.make_sound(np.concatenate(buffers))
 
 
 def _load_or_generate(path: str, frequency: int, duration_ms: int) -> pygame.mixer.Sound:
@@ -53,28 +55,71 @@ def _load_or_generate_sequence(path: str, notes: list, repeats: int = 1) -> pyga
     return _generate_sequence(notes, repeats)
 
 
+def _load_optional(path: str) -> pygame.mixer.Sound | None:
+    """Load a Sound if the file exists; log a warning and return None otherwise."""
+    if os.path.isfile(path):
+        return pygame.mixer.Sound(path)
+    log.warning("Announcement sound not found (item will be skipped): %s", path)
+    return None
+
+
+# ---------------------------------------------------------------------------
+# AudioManager
+# ---------------------------------------------------------------------------
+
+# Spoken number words for scores 0-15
+_NUMBER_WORDS = [
+    "zero", "one", "two", "three", "four", "five", "six", "seven",
+    "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen",
+]
+
+
 class AudioManager:
     def __init__(self):
-        # pygame.mixer must already be initialised by the time this is called
+        # pygame.mixer must already be initialised
+
+        # --- Immediate-play sounds (hit signals, reset) ---
         self.hit_on_target  = _load_or_generate(config.SOUND_HIT_ON_TARGET,
                                                  config.TONE_HIT_ON_TARGET["frequency"],
                                                  config.TONE_HIT_ON_TARGET["duration_ms"])
         self.hit_off_target = _load_or_generate(config.SOUND_HIT_OFF_TARGET,
                                                  config.TONE_HIT_OFF_TARGET["frequency"],
                                                  config.TONE_HIT_OFF_TARGET["duration_ms"])
-        self.reset          = _load_or_generate(config.SOUND_RESET,
+        self.reset_sound    = _load_or_generate(config.SOUND_RESET,
                                                  config.TONE_RESET["frequency"],
                                                  config.TONE_RESET["duration_ms"])
-        self.winner_left  = _load_or_generate_sequence(config.SOUND_WINNER_LEFT,
-                                                        config.TONE_WINNER["notes"],
-                                                        config.TONE_WINNER["repeats"])
-        self.winner_right = _load_or_generate_sequence(config.SOUND_WINNER_RIGHT,
-                                                        config.TONE_WINNER["notes"],
-                                                        config.TONE_WINNER["repeats"])
-        self.point_left   = _load_or_generate_sequence(config.SOUND_POINT_LEFT,
-                                                        config.TONE_POINT["notes"])
-        self.point_right  = _load_or_generate_sequence(config.SOUND_POINT_RIGHT,
-                                                        config.TONE_POINT["notes"])
+
+        # --- Announcement phrase sounds ---
+        _sd = Path(config.SOUND_HIT_ON_TARGET).parent  # derives the sounds/ directory
+
+        def _p(name: str) -> str:
+            return str(_sd / f"{name}.wav")
+
+        # Touch calls — configurable paths, with a generated fallback
+        self._touch_left  = _load_or_generate_sequence(config.SOUND_TOUCH_LEFT,
+                                                        config.TONE_TOUCH["notes"])
+        self._touch_right = _load_or_generate_sequence(config.SOUND_TOUCH_RIGHT,
+                                                        config.TONE_TOUCH["notes"])
+
+        # Fixed phrase files (no fallback — all present in sounds/)
+        self._the_score_is       = _load_optional(_p("the_score_is"))
+        self._the_final_score_is = _load_optional(_p("the_final_score_is"))
+        self._the_winner_is      = _load_optional(_p("the_winner_is"))
+        self._fencer_left        = _load_optional(_p("the_fencer_to_my_left"))
+        self._fencer_right       = _load_optional(_p("the_fencer_to_my_right"))
+        self._all                = _load_optional(_p("all"))
+
+        # Number sounds: {0: Sound, 1: Sound, ...}
+        self._numbers: dict[int, pygame.mixer.Sound | None] = {
+            i: _load_optional(_p(word)) for i, word in enumerate(_NUMBER_WORDS)
+        }
+
+        # Announcement queue: list of (play_at_ms, Sound), sorted by play_at_ms
+        self._queue: list[tuple[float, pygame.mixer.Sound]] = []
+
+    # ------------------------------------------------------------------
+    # Immediate-play methods
+    # ------------------------------------------------------------------
 
     def play_hit_on_target(self):
         self.hit_on_target.play()
@@ -83,16 +128,88 @@ class AudioManager:
         self.hit_off_target.play()
 
     def play_reset(self):
-        self.reset.play()
+        self.reset_sound.play()
 
-    def play_winner_left(self):
-        self.winner_left.play()
+    # ------------------------------------------------------------------
+    # Announcement scheduling
+    # ------------------------------------------------------------------
 
-    def play_winner_right(self):
-        self.winner_right.play()
+    def _dur(self, sound: pygame.mixer.Sound | None) -> float:
+        """Duration in ms, or 0 if sound is None."""
+        return sound.get_length() * 1000.0 if sound is not None else 0.0
 
-    def play_point_left(self):
-        self.point_left.play()
+    def _enqueue(self, t: float, sound: pygame.mixer.Sound | None) -> float:
+        """Append sound to the queue at time t; return t advanced by its duration."""
+        if sound is not None:
+            self._queue.append((t, sound))
+            return t + self._dur(sound)
+        return t
 
-    def play_point_right(self):
-        self.point_right.play()
+    def _build_score_suffix(self, t: float, scorer_score: int, other_score: int) -> float:
+        """Append 'X' or 'X all' or 'X Y' to the queue. Returns advanced time."""
+        scorer_snd = self._numbers.get(scorer_score)
+        other_snd  = self._numbers.get(other_score)
+
+        t = self._enqueue(t, scorer_snd)
+        if scorer_score == other_score:
+            t += config.ANNOUNCE_GAP_SCORE_TO_ALL
+            t = self._enqueue(t, self._all)
+        else:
+            t += config.ANNOUNCE_GAP_BETWEEN_SCORES
+            t = self._enqueue(t, other_snd)
+        return t
+
+    def schedule_point_announcement(self, scorer_is_left: bool,
+                                    scorer_score: int, other_score: int,
+                                    now_ms: int) -> None:
+        """
+        Queue: touch call → pause → "the score is" → score (with "all" if tied).
+        Cancels any in-progress announcement.
+        """
+        self._queue.clear()
+        t = float(now_ms)
+
+        touch = self._touch_left if scorer_is_left else self._touch_right
+        t = self._enqueue(t, touch)
+        t += config.ANNOUNCE_GAP_AFTER_TOUCH
+
+        t = self._enqueue(t, self._the_score_is)
+        t += config.ANNOUNCE_GAP_BETWEEN_WORDS
+
+        self._build_score_suffix(t, scorer_score, other_score)
+
+    def schedule_winner_announcement(self, winner_is_left: bool,
+                                     winner_score: int, loser_score: int,
+                                     now_ms: int) -> int:
+        """
+        Queue: touch call → "the winner is" → fencer name → "the final score is" → score.
+        Returns the suggested winner_reset_at timestamp (ms) — after the last sound
+        plus a 1-second buffer.
+        """
+        self._queue.clear()
+        t = float(now_ms)
+
+        touch = self._touch_left if winner_is_left else self._touch_right
+        t = self._enqueue(t, touch)
+        t += config.ANNOUNCE_GAP_AFTER_TOUCH
+
+        t = self._enqueue(t, self._the_winner_is)
+        t += config.ANNOUNCE_GAP_BETWEEN_WORDS
+
+        fencer = self._fencer_left if winner_is_left else self._fencer_right
+        t = self._enqueue(t, fencer)
+        t += config.ANNOUNCE_GAP_AFTER_WINNER_NAME
+
+        t = self._enqueue(t, self._the_final_score_is)
+        t += config.ANNOUNCE_GAP_BETWEEN_WORDS
+
+        t = self._build_score_suffix(t, winner_score, loser_score)
+        t += 1000.0  # 1-second buffer after last word
+
+        return int(t)
+
+    def update_announcements(self, now_ms: int) -> None:
+        """Play any queued announcement items that are due. Call once per main-loop frame."""
+        while self._queue and now_ms >= self._queue[0][0]:
+            _, sound = self._queue.pop(0)
+            sound.play()
