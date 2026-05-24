@@ -22,7 +22,8 @@ class BoutState:
     white_right_active: bool = False
 
     # Double-hit delta
-    delta_ms: Optional[int] = None   # None = not shown
+    delta_ms:       Optional[int] = None   # None = not shown
+    delta_set_time: Optional[int] = None   # ticks when delta was last set
 
     # Clock
     clock_running:   bool  = False
@@ -39,3 +40,4 @@ class BoutState:
         self.white_left_active  = False
         self.white_right_active = False
         self.delta_ms          = None
+        self.delta_set_time    = None

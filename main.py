@@ -39,6 +39,42 @@ DEMO_KEYS = {
 
 
 # ---------------------------------------------------------------------------
+# Disconnect detection
+# ---------------------------------------------------------------------------
+
+class DisconnectDetector:
+    """
+    Suppresses the buzzer when hit signals arrive too rapidly (disconnected foil).
+
+    Mutes audio once DISCONNECT_HIT_COUNT signals are seen within
+    DISCONNECT_WINDOW_MS.  Unmutes after DISCONNECT_SILENCE_MS passes with no
+    hit signals from either fencer.  Visuals are never affected.
+    """
+
+    def __init__(self):
+        self._hit_times: list[int] = []
+        self.muted = False
+
+    def record_hit(self, now_ms: int):
+        """Call on every hit-type opcode after deciding whether to play sound."""
+        self._hit_times.append(now_ms)
+        cutoff = now_ms - config.DISCONNECT_WINDOW_MS
+        self._hit_times = [t for t in self._hit_times if t >= cutoff]
+        if len(self._hit_times) >= config.DISCONNECT_HIT_COUNT:
+            if not self.muted:
+                log.warning("Disconnect detected — buzzer muted")
+            self.muted = True
+
+    def update(self, now_ms: int):
+        """Call once per main-loop iteration to check whether silence has elapsed."""
+        if self.muted and self._hit_times:
+            if (now_ms - self._hit_times[-1]) >= config.DISCONNECT_SILENCE_MS:
+                self.muted = False
+                self._hit_times.clear()
+                log.info("Disconnect cleared — buzzer restored")
+
+
+# ---------------------------------------------------------------------------
 # State mutation — called from the main loop only
 # ---------------------------------------------------------------------------
 
@@ -57,7 +93,8 @@ def _open_hit_window(state: BoutState, now_ms: int):
     state.white_right_active = False
 
 
-def apply_command(opcode: int, payload, state: BoutState, audio_mgr: audio.AudioManager, now_ms: int):
+def apply_command(opcode: int, payload, state: BoutState,
+                  audio_mgr: audio.AudioManager, detector: DisconnectDetector, now_ms: int):
     if opcode == opcodes.OP_SCORE_LEFT_INC:
         state.score_left  = max(0, state.score_left  + 1)
     elif opcode == opcodes.OP_SCORE_LEFT_DEC:
@@ -76,16 +113,18 @@ def apply_command(opcode: int, payload, state: BoutState, audio_mgr: audio.Audio
         if first_hit:
             _open_hit_window(state, now_ms)
         state.hit_left_active = True
-        if first_hit:
+        if first_hit and not detector.muted:
             audio_mgr.play_hit_on_target()
+        detector.record_hit(now_ms)
 
     elif opcode == opcodes.OP_HIT_RIGHT:
         first_hit = not _window_active(state, now_ms)
         if first_hit:
             _open_hit_window(state, now_ms)
         state.hit_right_active = True
-        if first_hit:
+        if first_hit and not detector.muted:
             audio_mgr.play_hit_on_target()
+        detector.record_hit(now_ms)
 
     elif opcode == opcodes.OP_HIT_BOTH:
         first_hit = not _window_active(state, now_ms)
@@ -93,27 +132,31 @@ def apply_command(opcode: int, payload, state: BoutState, audio_mgr: audio.Audio
             _open_hit_window(state, now_ms)
         state.hit_left_active  = True
         state.hit_right_active = True
-        if first_hit:
+        if first_hit and not detector.muted:
             audio_mgr.play_hit_on_target()
+        detector.record_hit(now_ms)
 
     elif opcode == opcodes.OP_WHITE_LEFT:
         first_hit = not _window_active(state, now_ms)
         if first_hit:
             _open_hit_window(state, now_ms)
         state.white_left_active = True
-        if first_hit:
+        if first_hit and not detector.muted:
             audio_mgr.play_hit_off_target()
+        detector.record_hit(now_ms)
 
     elif opcode == opcodes.OP_WHITE_RIGHT:
         first_hit = not _window_active(state, now_ms)
         if first_hit:
             _open_hit_window(state, now_ms)
         state.white_right_active = True
-        if first_hit:
+        if first_hit and not detector.muted:
             audio_mgr.play_hit_off_target()
+        detector.record_hit(now_ms)
 
     elif opcode == opcodes.OP_DELTA_TIME:
-        state.delta_ms = payload
+        state.delta_ms       = payload
+        state.delta_set_time = now_ms
 
     elif opcode == opcodes.OP_CLOCK_START:
         state.clock_running = True
@@ -180,6 +223,7 @@ def main():
 
     dirty = True           # force an initial render on startup
     was_window_active = False
+    detector = DisconnectDetector()
 
     # --- Main loop ---
     running = True
@@ -205,7 +249,7 @@ def main():
                 opcode, payload = cmd_queue.get_nowait()
             except queue.Empty:
                 break
-            apply_command(opcode, payload, state, audio_mgr, now_ms)
+            apply_command(opcode, payload, state, audio_mgr, detector, now_ms)
             dirty = True
 
         # Tick the clock — only dirty when the displayed MM:SS value changes
@@ -217,11 +261,21 @@ def main():
             if int(state.clock_seconds) != prev_int:
                 dirty = True
 
+        # Update disconnect detector (checks silence period, clears mute if elapsed)
+        detector.update(now_ms)
+
         # Detect hit window expiry — need one more render when indicators go dark
         is_window_active = _window_active(state, now_ms)
         if was_window_active and not is_window_active:
             dirty = True
         was_window_active = is_window_active
+
+        # Clear delta display after timeout
+        if (state.delta_ms is not None and state.delta_set_time is not None and
+                (now_ms - state.delta_set_time) >= config.DELTA_DISPLAY_MS):
+            state.delta_ms       = None
+            state.delta_set_time = None
+            dirty = True
 
         # Render only when something visible has changed
         if dirty:

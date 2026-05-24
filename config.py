@@ -50,6 +50,10 @@ PIE_CENTER_Y_FRAC  = _c["layout"]["pie_center_y_frac"]
 # --- Timing ---
 HIT_WINDOW_MS             = _c["timing"]["hit_window_ms"]
 HIT_INDICATOR_DURATION_MS = _c["timing"]["hit_indicator_duration_ms"]
+DELTA_DISPLAY_MS          = _c["timing"]["delta_display_ms"]
+DISCONNECT_HIT_COUNT      = _c["timing"]["disconnect_hit_count"]
+DISCONNECT_WINDOW_MS      = _c["timing"]["disconnect_window_ms"]
+DISCONNECT_SILENCE_MS     = _c["timing"]["disconnect_silence_ms"]
 
 # --- Serial defaults ---
 DEFAULT_PORT = _c["serial"]["default_port"]
