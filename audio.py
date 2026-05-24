@@ -19,7 +19,7 @@ def _generate_tone(frequency: int, duration_ms: int, volume: float = 0.6) -> pyg
     n_samples   = int(sample_rate * duration_ms / 1000)
     t           = np.linspace(0, duration_ms / 1000, n_samples, endpoint=False)
     wave        = (np.sin(2 * np.pi * frequency * t) * volume * 32767).astype(np.int16)
-    return pygame.sndarray.make_sound(wave)
+    return pygame.sndarray.make_sound(np.column_stack([wave, wave]))
 
 
 def _generate_sequence(notes: list, repeats: int = 1, volume: float = 0.6) -> pygame.mixer.Sound:
@@ -40,7 +40,8 @@ def _generate_sequence(notes: list, repeats: int = 1, volume: float = 0.6) -> py
                 t    = np.linspace(0, dur_ms / 1000, n, endpoint=False)
                 wave = (np.sin(2 * np.pi * freq * t) * volume * 32767).astype(np.int16)
                 buffers.append(wave)
-    return pygame.sndarray.make_sound(np.concatenate(buffers))
+    mono = np.concatenate(buffers)
+    return pygame.sndarray.make_sound(np.column_stack([mono, mono]))
 
 
 def _load_or_generate(path: str, frequency: int, duration_ms: int) -> pygame.mixer.Sound:
