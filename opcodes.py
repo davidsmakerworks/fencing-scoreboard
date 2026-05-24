@@ -1,6 +1,8 @@
 # opcodes.py — serial protocol constants shared with the scoring hardware firmware.
 # These are semi-permanent; changing them requires a matching firmware update.
 
+FRAME_START = 0xAA  # preamble byte that precedes every packet on the TTL link
+
 OP_SCORE_LEFT_INC  = 0x01
 OP_SCORE_LEFT_DEC  = 0x02
 OP_SCORE_RIGHT_INC = 0x03

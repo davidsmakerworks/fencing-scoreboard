@@ -32,6 +32,15 @@ def _reader_loop(port_name: str, baud: int, cmd_queue: queue.Queue, stop_event: 
         with serial.Serial(port_name, baud, timeout=0.1) as port:
             log.info("Serial port %s opened at %d baud", port_name, baud)
             while not stop_event.is_set():
+                # Seek to the next FRAME_START byte, discarding anything before it.
+                # This resyncs cleanly after noise, a firmware reset, or a mid-stream connect.
+                raw = port.read(1)
+                if not raw:
+                    continue
+                if raw[0] != opcodes.FRAME_START:
+                    log.debug("Discarding out-of-frame byte: 0x%02X", raw[0])
+                    continue
+
                 raw = port.read(1)
                 if not raw:
                     continue
