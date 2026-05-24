@@ -2,7 +2,7 @@
   "screen": {
     "width": 1280,
     "height": 720,
-    "fps": 60
+    "fps": 15
   },
 
   "colors": {
@@ -54,6 +54,7 @@
     "hit_on_target_file":  "sounds/hit_on_target.wav",
     "hit_off_target_file": "sounds/hit_off_target.wav",
     "reset_file":          "sounds/reset.wav",
+    "mixer_buffer": 2048,
     "tones": {
       "hit_on_target":  {"frequency": 880, "duration_ms": 1000},
       "hit_off_target": {"frequency": 880, "duration_ms": 1000},

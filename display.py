@@ -11,12 +11,24 @@ from state import BoutState
 # ---------------------------------------------------------------------------
 _fonts: dict = {}
 
+# Rendered text surface cache — keyed by (font_name, text, color).
+# font.render() is expensive on a software-rendered Pi; we only call it when
+# the content actually changes.
+_text_cache: dict = {}
+
 
 def load_fonts():
     """Call once after pygame.init() to populate the font cache."""
     _fonts["score"]  = pygame.font.SysFont("Arial", config.SCORE_FONT_SIZE, bold=True)
     _fonts["clock"]  = pygame.font.SysFont("Arial", config.CLOCK_FONT_SIZE, bold=True)
     _fonts["delta"]  = pygame.font.SysFont("Arial", config.DELTA_FONT_SIZE)
+
+
+def _render_cached(font_key: str, text: str, color) -> pygame.Surface:
+    key = (font_key, text, color)
+    if key not in _text_cache:
+        _text_cache[key] = _fonts[font_key].render(text, True, color)
+    return _text_cache[key]
 
 
 # ---------------------------------------------------------------------------
@@ -31,7 +43,7 @@ def _px(frac_x: float, frac_y: float, w: int, h: int) -> tuple[int, int]:
 # ---------------------------------------------------------------------------
 
 def _draw_score(surface: pygame.Surface, score: int, x: int, y: int, color):
-    text = _fonts["score"].render(str(score), True, color)
+    text = _render_cached("score", str(score), color)
     rect = text.get_rect(center=(x, y))
     surface.blit(text, rect)
 
@@ -39,7 +51,7 @@ def _draw_score(surface: pygame.Surface, score: int, x: int, y: int, color):
 def _draw_clock(surface: pygame.Surface, seconds: float, x: int, y: int):
     total = max(0, int(seconds))
     mm, ss = divmod(total, 60)
-    text = _fonts["clock"].render(f"{mm:02d}:{ss:02d}", True, config.CLOCK_COLOR)
+    text = _render_cached("clock", f"{mm:02d}:{ss:02d}", config.CLOCK_COLOR)
     rect = text.get_rect(center=(x, y))
     surface.blit(text, rect)
 
@@ -47,7 +59,7 @@ def _draw_clock(surface: pygame.Surface, seconds: float, x: int, y: int):
 def _draw_delta(surface: pygame.Surface, delta_ms: int, cx: int, y: int, w: int, h: int):
     """Draw the Δt label, millisecond value, and pie-chart circle."""
     # Text
-    label = _fonts["delta"].render(f"Δt  {delta_ms} ms", True, config.DELTA_COLOR)
+    label = _render_cached("delta", f"Δt  {delta_ms} ms", config.DELTA_COLOR)
     rect  = label.get_rect(center=(cx, y))
     surface.blit(label, rect)
 

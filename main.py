@@ -152,7 +152,7 @@ def main():
 
     # --- Pygame init ---
     pygame.init()
-    pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=256)
+    pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=config.MIXER_BUFFER)
 
     flags = 0 if args.windowed else pygame.FULLSCREEN
     screen = pygame.display.set_mode((args.width, args.height), flags)

@@ -56,6 +56,7 @@ DEFAULT_PORT = _c["serial"]["default_port"]
 DEFAULT_BAUD = _c["serial"]["default_baud"]
 
 # --- Audio ---
+MIXER_BUFFER         = _c["audio"]["mixer_buffer"]
 SOUND_HIT_ON_TARGET  = _c["audio"]["hit_on_target_file"]
 SOUND_HIT_OFF_TARGET = _c["audio"]["hit_off_target_file"]
 SOUND_RESET          = _c["audio"]["reset_file"]
