@@ -39,6 +39,25 @@ DEMO_KEYS = {
 
 
 # ---------------------------------------------------------------------------
+# Score-limit cycling (controller button / keyboard)
+# ---------------------------------------------------------------------------
+
+_SCORE_LIMIT_CYCLE = [5, 10, 15]
+_STATUS_MESSAGE_DURATION_MS = 2000
+
+
+def _cycle_score_limit(state: BoutState, now_ms: int):
+    """Advance bout_win_score through 5 → 10 → 15 → 5 and post a status message."""
+    try:
+        idx = _SCORE_LIMIT_CYCLE.index(state.bout_win_score)
+    except ValueError:
+        idx = 0
+    state.bout_win_score = _SCORE_LIMIT_CYCLE[(idx + 1) % len(_SCORE_LIMIT_CYCLE)]
+    state.status_message = f"Score limit: {state.bout_win_score}"
+    state.status_message_until = now_ms + _STATUS_MESSAGE_DURATION_MS
+
+
+# ---------------------------------------------------------------------------
 # Disconnect detection
 # ---------------------------------------------------------------------------
 
@@ -97,7 +116,7 @@ def apply_command(opcode: int, payload, state: BoutState,
                   audio_mgr: audio.AudioManager, detector: DisconnectDetector, now_ms: int):
     if opcode == opcodes.OP_SCORE_LEFT_INC:
         state.score_left = max(0, state.score_left + 1)
-        if state.score_left == config.BOUT_WIN_SCORE:
+        if state.score_left == state.bout_win_score:
             suggested = audio_mgr.schedule_winner_announcement(
                 True, state.score_left, state.score_right, now_ms)
             state.winner_reset_at = max(now_ms + config.WINNER_RESET_DELAY_MS, suggested)
@@ -108,7 +127,7 @@ def apply_command(opcode: int, payload, state: BoutState,
         state.score_left  = max(0, state.score_left  - 1)
     elif opcode == opcodes.OP_SCORE_RIGHT_INC:
         state.score_right = max(0, state.score_right + 1)
-        if state.score_right == config.BOUT_WIN_SCORE:
+        if state.score_right == state.bout_win_score:
             suggested = audio_mgr.schedule_winner_announcement(
                 False, state.score_right, state.score_left, now_ms)
             state.winner_reset_at = max(now_ms + config.WINNER_RESET_DELAY_MS, suggested)
@@ -215,6 +234,7 @@ def main():
     # --- Pygame init ---
     pygame.init()
     pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=config.MIXER_BUFFER)
+    pygame.joystick.init()
 
     flags = 0 if args.windowed else pygame.FULLSCREEN
     screen = pygame.display.set_mode((args.width, args.height), flags)
@@ -228,7 +248,16 @@ def main():
 
     # --- State ---
     state = BoutState()
+    state.bout_win_score = config.BOUT_WIN_SCORE
     cmd_queue: queue.Queue = queue.Queue()
+
+    # --- Gamepad ---
+    joysticks: dict = {}
+    for i in range(pygame.joystick.get_count()):
+        joy = pygame.joystick.Joystick(i)
+        joy.init()
+        joysticks[joy.get_instance_id()] = joy
+        log.info("Gamepad connected: %s (id %d)", joy.get_name(), joy.get_instance_id())
 
     # --- Serial (skipped in demo mode) ---
     if not args.demo:
@@ -258,9 +287,25 @@ def main():
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     running = False
+                elif event.key == pygame.K_l:
+                    _cycle_score_limit(state, now_ms)
+                    dirty = True
                 elif args.demo and event.key in DEMO_KEYS:
                     op, pl = DEMO_KEYS[event.key]
                     cmd_queue.put((op, pl))
+            elif event.type == pygame.JOYDEVICEADDED:
+                joy = pygame.joystick.Joystick(event.device_index)
+                joy.init()
+                joysticks[joy.get_instance_id()] = joy
+                log.info("Gamepad connected: %s (id %d)", joy.get_name(), joy.get_instance_id())
+            elif event.type == pygame.JOYDEVICEREMOVED:
+                removed = joysticks.pop(event.instance_id, None)
+                if removed:
+                    log.info("Gamepad disconnected (id %d)", event.instance_id)
+            elif event.type == pygame.JOYBUTTONDOWN:
+                if event.button == config.GAMEPAD_SCORE_LIMIT_BUTTON:
+                    _cycle_score_limit(state, now_ms)
+                    dirty = True
 
         # Drain the command queue (serial thread or demo injections)
         while True:
@@ -303,6 +348,13 @@ def main():
         if state.winner_reset_at is not None and now_ms >= state.winner_reset_at:
             state.reset_scores()
             state.reset_indicators()
+            dirty = True
+
+        # Expire status message after its display duration
+        if (state.status_message is not None and state.status_message_until is not None and
+                now_ms >= state.status_message_until):
+            state.status_message = None
+            state.status_message_until = None
             dirty = True
 
         # Render only when something visible has changed

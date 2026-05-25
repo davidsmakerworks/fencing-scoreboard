@@ -1,7 +1,8 @@
 {
   "game": {
-    "bout_win_score":        5,
-    "winner_reset_delay_ms": 5000
+    "bout_win_score":              5,
+    "winner_reset_delay_ms":       5000,
+    "gamepad_score_limit_button":  1
   },
 
   "screen": {

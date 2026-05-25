@@ -22,6 +22,7 @@ def load_fonts():
     _fonts["score"]  = pygame.font.SysFont("Arial", config.SCORE_FONT_SIZE, bold=True)
     _fonts["clock"]  = pygame.font.SysFont("Arial", config.CLOCK_FONT_SIZE, bold=True)
     _fonts["delta"]  = pygame.font.SysFont("Arial", config.DELTA_FONT_SIZE)
+    _fonts["status"] = pygame.font.SysFont("Arial", config.DELTA_FONT_SIZE)
 
 
 def _render_cached(font_key: str, text: str, color) -> pygame.Surface:
@@ -150,6 +151,12 @@ def _draw_indicators(surface: pygame.Surface, state: BoutState, now_ms: int, sw:
     _draw_indicator_bar(surface, right_cx, white_y, bar_w, bar_h // 2, right_white_color, filled=right_white_lit)
 
 
+def _draw_status_message(surface: pygame.Surface, message: str, sw: int, sh: int):
+    surf = _render_cached("status", message, config.WHITE)
+    rect = surf.get_rect(centerx=sw // 2, bottom=sh - 20)
+    surface.blit(surf, rect)
+
+
 # ---------------------------------------------------------------------------
 # Public render function
 # ---------------------------------------------------------------------------
@@ -176,3 +183,7 @@ def render(surface: pygame.Surface, state: BoutState, now_ms: int):
 
     # Hit indicator bars
     _draw_indicators(surface, state, now_ms, sw, sh)
+
+    # Transient status message (e.g. score limit change)
+    if state.status_message is not None:
+        _draw_status_message(surface, state.status_message, sw, sh)

@@ -61,6 +61,12 @@ In demo mode, use the keyboard to inject events:
 | V   | Set clock to 3:00 |
 | ESC | Quit |
 
+The following key works in **all modes** (not only demo):
+
+| Key | Action |
+|-----|--------|
+| L   | Cycle score limit (5 → 10 → 15 → 5) |
+
 ---
 
 ## Configuration
@@ -83,8 +89,9 @@ no recompilation is needed to change settings.
 ### `game`
 | Key | Default | Description |
 |-----|---------|-------------|
-| `bout_win_score` | 5 | Score that triggers the winner announcement and auto-reset |
+| `bout_win_score` | 5 | Starting score limit; the value that triggers the winner announcement and auto-reset. Can be changed at runtime (see [Score limit](#score-limit)). |
 | `winner_reset_delay_ms` | 5000 | Minimum delay after the winner announcement before scores are reset to zero (ms); actual reset waits until the announcement finishes if longer |
+| `gamepad_score_limit_button` | 1 | Gamepad button ID that cycles the score limit at runtime |
 
 ### `timing`
 | Key | Default | Description |
@@ -189,7 +196,7 @@ When a fencer scores a point below the winning score, the following sequence pla
 6. Either: pause + other fencer's score (`gap_between_scores_ms`) — or — shorter pause + "all" (`gap_score_to_all_ms`) if tied
 
 ### Winner announcement
-When a fencer's score reaches `bout_win_score` (default 5):
+When a fencer's score reaches the current score limit (default 5; changeable at runtime — see [Score limit](#score-limit)):
 
 1. Touch call (`touch_left.wav` or `touch_right.wav`)
 2. Pause (`gap_after_touch_ms`)
@@ -204,6 +211,38 @@ When a fencer's score reaches `bout_win_score` (default 5):
 After the full announcement finishes (plus a 1-second buffer), both scores are
 automatically reset to zero and all indicators are cleared.
 A manual `SCORE_RESET` opcode cancels any pending auto-reset immediately.
+
+---
+
+## Score limit
+
+The score limit (the score that ends a bout and triggers the winner announcement)
+can be changed at runtime without restarting the application. It cycles through
+**5 → 10 → 15 → 5** and is never written back to `config.json` — the change
+applies only for the current session.
+
+| Input | Action |
+|-------|--------|
+| Keyboard **L** | Cycle score limit (works in all modes) |
+| Gamepad button `gamepad_score_limit_button` (default **1**) | Cycle score limit |
+
+Each time the limit changes, a status message — e.g. **Score limit: 10** —
+appears centred at the bottom of the screen for 2 seconds.
+
+To change the default button ID, set `gamepad_score_limit_button` in `config.json`
+under `game`. Button numbering starts at 0; consult your controller's documentation
+or test with a gamepad utility to find the right button index.
+
+---
+
+## Game controller
+
+Any gamepad or joystick recognised by SDL (via Pygame) can be connected before or
+after the application starts — hot-plug is supported. When a controller is detected,
+a log message identifies it by name and instance ID.
+
+Currently the only in-game action mapped to a controller button is cycling the
+score limit (see [Score limit](#score-limit) above).
 
 ---
 

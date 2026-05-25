@@ -49,8 +49,9 @@ PIE_RADIUS         = _c["layout"]["pie_radius"]
 PIE_CENTER_Y_FRAC  = _c["layout"]["pie_center_y_frac"]
 
 # --- Game ---
-BOUT_WIN_SCORE        = _c["game"]["bout_win_score"]
-WINNER_RESET_DELAY_MS = _c["game"]["winner_reset_delay_ms"]
+BOUT_WIN_SCORE               = _c["game"]["bout_win_score"]
+WINNER_RESET_DELAY_MS        = _c["game"]["winner_reset_delay_ms"]
+GAMEPAD_SCORE_LIMIT_BUTTON   = _c["game"]["gamepad_score_limit_button"]
 
 # --- Timing ---
 HIT_WINDOW_MS             = _c["timing"]["hit_window_ms"]

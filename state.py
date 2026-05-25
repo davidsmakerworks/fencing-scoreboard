@@ -33,6 +33,13 @@ class BoutState:
     # Bout winner — set to the ticks at which scores should auto-reset after a win
     winner_reset_at: Optional[int] = None
 
+    # Runtime score limit (in-memory only; initialised from config on startup)
+    bout_win_score: int = 5
+
+    # Transient status message displayed centred at the bottom of the screen
+    status_message: Optional[str] = None
+    status_message_until: Optional[int] = None
+
     def reset_scores(self):
         self.score_left      = 0
         self.score_right     = 0
