@@ -116,7 +116,7 @@ def apply_command(opcode: int, payload, state: BoutState,
                   audio_mgr: audio.AudioManager, detector: DisconnectDetector, now_ms: int):
     if opcode == opcodes.OP_SCORE_LEFT_INC:
         state.score_left = max(0, state.score_left + 1)
-        if state.score_left == state.bout_win_score:
+        if state.score_left >= state.bout_win_score:
             suggested = audio_mgr.schedule_winner_announcement(
                 True, state.score_left, state.score_right, now_ms)
             state.winner_reset_at = max(now_ms + config.WINNER_RESET_DELAY_MS, suggested)
@@ -127,7 +127,7 @@ def apply_command(opcode: int, payload, state: BoutState,
         state.score_left  = max(0, state.score_left  - 1)
     elif opcode == opcodes.OP_SCORE_RIGHT_INC:
         state.score_right = max(0, state.score_right + 1)
-        if state.score_right == state.bout_win_score:
+        if state.score_right >= state.bout_win_score:
             suggested = audio_mgr.schedule_winner_announcement(
                 False, state.score_right, state.score_left, now_ms)
             state.winner_reset_at = max(now_ms + config.WINNER_RESET_DELAY_MS, suggested)
