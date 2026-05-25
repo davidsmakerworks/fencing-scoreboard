@@ -49,9 +49,19 @@ PIE_RADIUS         = _c["layout"]["pie_radius"]
 PIE_CENTER_Y_FRAC  = _c["layout"]["pie_center_y_frac"]
 
 # --- Game ---
-BOUT_WIN_SCORE               = _c["game"]["bout_win_score"]
-WINNER_RESET_DELAY_MS        = _c["game"]["winner_reset_delay_ms"]
-GAMEPAD_SCORE_LIMIT_BUTTON   = _c["game"]["gamepad_score_limit_button"]
+BOUT_WIN_SCORE        = _c["game"]["bout_win_score"]
+WINNER_RESET_DELAY_MS = _c["game"]["winner_reset_delay_ms"]
+
+# --- Gamepad buttons ---
+GAMEPAD_SCORE_LIMIT_BUTTON    = _c["gamepad"]["score_limit_button"]
+GAMEPAD_RESET_BUTTON          = _c["gamepad"]["reset_button"]
+GAMEPAD_CLOCK_TOGGLE_BUTTON   = _c["gamepad"]["clock_toggle_button"]
+GAMEPAD_START_SEQUENCE_BUTTON = _c["gamepad"]["start_sequence_button"]
+
+# --- Start sequence timing ---
+START_SEQUENCE_INITIAL_DELAY_MS = _c["start_sequence"]["initial_delay_ms"]
+START_SEQUENCE_RANDOM_MIN_MS    = _c["start_sequence"]["random_delay_min_ms"]
+START_SEQUENCE_RANDOM_MAX_MS    = _c["start_sequence"]["random_delay_max_ms"]
 
 # --- Timing ---
 HIT_WINDOW_MS             = _c["timing"]["hit_window_ms"]
@@ -72,12 +82,18 @@ SOUND_HIT_OFF_TARGET = _c["audio"]["hit_off_target_file"]
 SOUND_RESET          = _c["audio"]["reset_file"]
 SOUND_TOUCH_LEFT     = _c["audio"]["touch_left_file"]
 SOUND_TOUCH_RIGHT    = _c["audio"]["touch_right_file"]
+SOUND_HALT           = _c["audio"]["halt_file"]
+SOUND_TIME_EXPIRED   = _c["audio"]["time_expired_file"]
+SOUND_EN_GARDE       = _c["audio"]["en_garde_file"]
+SOUND_READY          = _c["audio"]["ready_file"]
+SOUND_FENCE          = _c["audio"]["fence_file"]
 
 # Tone fallbacks when WAV files are absent
 TONE_HIT_ON_TARGET  = _c["audio"]["tones"]["hit_on_target"]
 TONE_HIT_OFF_TARGET = _c["audio"]["tones"]["hit_off_target"]
 TONE_RESET          = _c["audio"]["tones"]["reset"]
 TONE_TOUCH          = _c["audio"]["tones"]["touch"]
+TONE_HALT_BEEPS     = _c["audio"]["tones"]["halt_beeps"]
 
 # Announcement speech-cadence gaps (ms)
 ANNOUNCE_GAP_AFTER_TOUCH       = _c["audio"]["announcement"]["gap_after_touch_ms"]

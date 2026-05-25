@@ -1,6 +1,7 @@
 # audio.py — sound loading, tone generation, and announcement scheduling
 
 import os
+import random
 import logging
 from pathlib import Path
 import pygame
@@ -101,6 +102,19 @@ class AudioManager:
                                                         config.TONE_TOUCH["notes"])
         self._touch_right = _load_or_generate_sequence(config.SOUND_TOUCH_RIGHT,
                                                         config.TONE_TOUCH["notes"])
+
+        # Halt: WAV if present, otherwise 6 rapid synthesised beeps
+        self._halt = _load_or_generate_sequence(config.SOUND_HALT,
+                                                 config.TONE_HALT_BEEPS["notes"],
+                                                 config.TONE_HALT_BEEPS["repeats"])
+
+        # Time-expired phrase (optional; skipped if WAV absent)
+        self._time_expired_sound = _load_optional(config.SOUND_TIME_EXPIRED)
+
+        # Start-sequence phrases (all optional; step is skipped if WAV absent)
+        self._en_garde = _load_optional(config.SOUND_EN_GARDE)
+        self._ready    = _load_optional(config.SOUND_READY)
+        self._fence    = _load_optional(config.SOUND_FENCE)
 
         # Fixed phrase files (no fallback — all present in sounds/)
         self._the_score_is       = _load_optional(_p("the_score_is"))
@@ -207,6 +221,76 @@ class AudioManager:
         t = self._build_score_suffix(t, winner_score, loser_score)
         t += 1000.0  # 1-second buffer after last word
 
+        return int(t)
+
+    def cancel_queue(self):
+        """Discard all pending queued announcements."""
+        self._queue.clear()
+
+    def schedule_start_sequence(self, now_ms: int, initial_delay_ms: int,
+                                 random_min_ms: int, random_max_ms: int) -> int:
+        """
+        Queue: (initial delay) → "en garde" → (random delay) → "ready" →
+               (random delay) → "fence" → [clock starts].
+        Cancels any in-progress announcements.
+        Returns the timestamp (ms) at which the clock should start.
+        """
+        self._queue.clear()
+        t = float(now_ms) + initial_delay_ms
+
+        t = self._enqueue(t, self._en_garde)
+        t += random.randint(random_min_ms, random_max_ms)
+
+        t = self._enqueue(t, self._ready)
+        t += random.randint(random_min_ms, random_max_ms)
+
+        t = self._enqueue(t, self._fence)
+        # t is now the moment "fence" finishes — clock starts then
+        return int(t)
+
+    def schedule_time_expired_announcement(self, left_score: int, right_score: int,
+                                            now_ms: int) -> int:
+        """
+        Queue: halt → time-expired phrase → winner announcement (or tie score).
+        Winner is determined by the higher score regardless of bout_win_score.
+        Returns the suggested winner_reset_at timestamp (ms).
+        """
+        self._queue.clear()
+        t = float(now_ms)
+
+        t = self._enqueue(t, self._halt)
+        t += config.ANNOUNCE_GAP_BETWEEN_WORDS
+
+        t = self._enqueue(t, self._time_expired_sound)
+        t += config.ANNOUNCE_GAP_AFTER_TOUCH
+
+        if left_score > right_score:
+            t = self._enqueue(t, self._touch_left)
+            t += config.ANNOUNCE_GAP_AFTER_TOUCH
+            t = self._enqueue(t, self._the_winner_is)
+            t += config.ANNOUNCE_GAP_BETWEEN_WORDS
+            t = self._enqueue(t, self._fencer_left)
+            t += config.ANNOUNCE_GAP_AFTER_WINNER_NAME
+            t = self._enqueue(t, self._the_final_score_is)
+            t += config.ANNOUNCE_GAP_BETWEEN_WORDS
+            t = self._build_score_suffix(t, left_score, right_score)
+        elif right_score > left_score:
+            t = self._enqueue(t, self._touch_right)
+            t += config.ANNOUNCE_GAP_AFTER_TOUCH
+            t = self._enqueue(t, self._the_winner_is)
+            t += config.ANNOUNCE_GAP_BETWEEN_WORDS
+            t = self._enqueue(t, self._fencer_right)
+            t += config.ANNOUNCE_GAP_AFTER_WINNER_NAME
+            t = self._enqueue(t, self._the_final_score_is)
+            t += config.ANNOUNCE_GAP_BETWEEN_WORDS
+            t = self._build_score_suffix(t, right_score, left_score)
+        else:
+            # Tie — "The score is X all"
+            t = self._enqueue(t, self._the_score_is)
+            t += config.ANNOUNCE_GAP_BETWEEN_WORDS
+            t = self._build_score_suffix(t, left_score, right_score)
+
+        t += 1000.0
         return int(t)
 
     def update_announcements(self, now_ms: int) -> None:

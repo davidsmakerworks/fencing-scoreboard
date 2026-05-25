@@ -36,6 +36,13 @@ class BoutState:
     # Runtime score limit (in-memory only; initialised from config on startup)
     bout_win_score: int = 5
 
+    # Set when the countdown clock reaches zero; cleared only by a clock reset.
+    # While True, all hit signals are ignored.
+    time_expired: bool = False
+
+    # Set by the start sequence; the main loop starts the clock when now_ms reaches this value.
+    start_clock_at: Optional[int] = None
+
     # Transient status message displayed centred at the bottom of the screen
     status_message: Optional[str] = None
     status_message_until: Optional[int] = None
