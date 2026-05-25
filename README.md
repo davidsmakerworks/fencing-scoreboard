@@ -124,6 +124,10 @@ Fractional screen-position values, font sizes, and RGB color tuples.
 All layout values are fractions of the screen dimensions so the display
 scales automatically when `width`/`height` change.
 
+| Layout key | Description |
+|------------|-------------|
+| `indicator_outline_width` | Stroke width in pixels used to draw indicator bars in their off (unlit) state |
+
 ---
 
 ## Audio
@@ -282,6 +286,8 @@ timer.
   a single display window and extinguish simultaneously when it expires.
 - For each side, only one of on-target or off-target can be active at a time
   (enforced by the hardware module).
+- When **lit**, indicator bars are drawn solid. When **off**, they are drawn as
+  an outline only (stroke width set by `indicator_outline_width` in `config.json`).
 
 ---
 

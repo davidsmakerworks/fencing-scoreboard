@@ -33,8 +33,8 @@
 
   "layout": {
     "score_y_frac":       0.42,
-    "left_score_x_frac":  0.22,
-    "right_score_x_frac": 0.78,
+    "left_score_x_frac":  0.165,
+    "right_score_x_frac": 0.835,
     "clock_x_frac":       0.50,
     "clock_y_frac":       0.20,
     "delta_y_frac":       0.38,
