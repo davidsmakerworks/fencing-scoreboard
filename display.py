@@ -49,12 +49,27 @@ def _draw_score(surface: pygame.Surface, score: int, x: int, y: int, color):
     surface.blit(text, rect)
 
 
-def _draw_clock(surface: pygame.Surface, seconds: float, x: int, y: int):
+def _draw_clock(surface: pygame.Surface, seconds: float, running: bool, x: int, y: int):
     total = max(0, int(seconds))
     mm, ss = divmod(total, 60)
-    text = _render_cached("clock", f"{mm:02d}:{ss:02d}", config.CLOCK_COLOR)
-    rect = text.get_rect(center=(x, y))
-    surface.blit(text, rect)
+
+    colon_color = config.YELLOW_BRIGHT if running else config.CLOCK_COLOR
+
+    min_surf   = _render_cached("clock", str(mm),     config.CLOCK_COLOR)
+    colon_surf = _render_cached("clock", ":",          colon_color)
+    sec_surf   = _render_cached("clock", f"{ss:02d}", config.CLOCK_COLOR)
+
+    total_w = min_surf.get_width() + colon_surf.get_width() + sec_surf.get_width()
+    left    = x - total_w // 2
+    top_min   = y - min_surf.get_height()   // 2
+    top_colon = y - colon_surf.get_height() // 2
+    top_sec   = y - sec_surf.get_height()   // 2
+
+    surface.blit(min_surf,   (left, top_min))
+    left += min_surf.get_width()
+    surface.blit(colon_surf, (left, top_colon))
+    left += colon_surf.get_width()
+    surface.blit(sec_surf,   (left, top_sec))
 
 
 def _draw_delta(surface: pygame.Surface, delta_ms: int, first_left,
@@ -174,7 +189,7 @@ def render(surface: pygame.Surface, state: BoutState, now_ms: int):
 
     # Clock
     clock_x, clock_y = _px(config.CLOCK_X_FRAC, config.CLOCK_Y_FRAC, sw, sh)
-    _draw_clock(surface, state.clock_seconds, clock_x, clock_y)
+    _draw_clock(surface, state.clock_seconds, state.clock_running, clock_x, clock_y)
 
     # Delta + pie chart (only when data is present)
     if state.delta_ms is not None:

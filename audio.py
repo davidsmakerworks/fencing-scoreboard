@@ -265,8 +265,6 @@ class AudioManager:
         t += config.ANNOUNCE_GAP_AFTER_TOUCH
 
         if left_score > right_score:
-            t = self._enqueue(t, self._touch_left)
-            t += config.ANNOUNCE_GAP_AFTER_TOUCH
             t = self._enqueue(t, self._the_winner_is)
             t += config.ANNOUNCE_GAP_BETWEEN_WORDS
             t = self._enqueue(t, self._fencer_left)
@@ -275,8 +273,6 @@ class AudioManager:
             t += config.ANNOUNCE_GAP_BETWEEN_WORDS
             t = self._build_score_suffix(t, left_score, right_score)
         elif right_score > left_score:
-            t = self._enqueue(t, self._touch_right)
-            t += config.ANNOUNCE_GAP_AFTER_TOUCH
             t = self._enqueue(t, self._the_winner_is)
             t += config.ANNOUNCE_GAP_BETWEEN_WORDS
             t = self._enqueue(t, self._fencer_right)

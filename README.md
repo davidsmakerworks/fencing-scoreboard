@@ -99,7 +99,7 @@ no recompilation is needed to change settings.
 | `score_limit_button` | 1 | Button ID that cycles the score limit |
 | `reset_button` | 2 | Button ID for full reset (scores, indicators, and clock) |
 | `clock_toggle_button` | 3 | Button ID that starts/stops the clock (or cancels a pending start sequence) |
-| `start_sequence_button` | 4 | Button ID that launches the en-garde / ready / fence start sequence |
+| `start_sequence_button` | 0 | Button ID that launches the en-garde / ready / fence start sequence |
 
 Button numbering starts at 0. Consult your controller's documentation or use a gamepad test utility to identify button indices.
 
@@ -232,7 +232,8 @@ When a fencer's score reaches the current score limit (default 5; changeable at 
 9. Winner's score, then loser's score (same cadence as point announcement)
 
 After the full announcement finishes (plus a 1-second buffer), both scores are
-automatically reset to zero and all indicators are cleared.
+automatically reset to zero, all indicators are cleared, and the clock is reset
+to 3:00 (stopped).
 A manual `SCORE_RESET` opcode cancels any pending auto-reset immediately.
 
 ---
@@ -264,8 +265,15 @@ Any gamepad or joystick recognised by SDL (via Pygame) can be connected before o
 after the application starts — hot-plug is supported. When a controller is detected,
 a log message identifies it by name and instance ID.
 
-Currently the only in-game action mapped to a controller button is cycling the
-score limit (see [Score limit](#score-limit) above).
+The following actions are mapped to controller buttons (all configurable under
+`gamepad` in `config.json`):
+
+| Button (default) | Action |
+|-----------------|--------|
+| 0 | Start sequence (en garde → ready → fence → clock starts) |
+| 1 | Cycle score limit |
+| 2 | Full reset — scores, indicators, and clock |
+| 3 | Start / stop clock (or cancel a pending start sequence) |
 
 ---
 
@@ -360,6 +368,20 @@ The clock is stopped when the sequence begins, so an accidental double-press is 
 
 ---
 
+## Clock display
+
+The clock is rendered as **M:SS** (single digit for minutes, two digits for
+seconds — e.g. `3:00`, `0:45`). No leading zero is shown for minutes.
+
+The colon changes colour to indicate clock state:
+
+| State | Colon colour |
+|-------|-------------|
+| Running | Yellow |
+| Stopped | Same grey as the digit colour |
+
+---
+
 ## Clock behaviour during a bout
 
 ### Stopping on a hit
@@ -378,14 +400,13 @@ When the countdown clock reaches zero the following sequence occurs automaticall
    `audio.tones.halt_beeps` in `config.json`).
 2. **Time expired** — `sounds/time_expired.wav` plays if the file exists
    (silently skipped otherwise).
-3. **Announcement** — the winner and final score are announced:
-   - If one fencer leads, the standard winner announcement plays
-     ("The winner is … the final score is …").
-   - If the scores are tied, "The score is X all" is announced.
+3. **Announcement** — the winner and final score are announced (no touch call):
+   - If one fencer leads: "The winner is … the final score is …"
+   - If the scores are tied: "The score is X all"
    - The winner is determined by the higher score regardless of the configured
      score limit.
-4. Scores **auto-reset** after the announcement finishes (same delay as a
-   normal winner announcement: `winner_reset_delay_ms`).
+4. Scores **auto-reset** and the clock resets to 3:00 after the announcement
+   finishes (same delay as a normal winner announcement: `winner_reset_delay_ms`).
 
 While the clock is at zero — from the moment it expires until a clock reset
 (`G` key in demo mode, or `CLOCK_RESET` / `CLOCK_SET` serial opcodes) — **all

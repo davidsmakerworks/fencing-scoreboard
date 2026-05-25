@@ -412,10 +412,13 @@ def main():
             state.delta_set_time = None
             dirty = True
 
-        # Auto-reset scores after winner fanfare delay
+        # Auto-reset scores and clock after winner fanfare delay
         if state.winner_reset_at is not None and now_ms >= state.winner_reset_at:
             state.reset_scores()
             state.reset_indicators()
+            state.clock_running = False
+            state.clock_seconds = 180.0
+            state.time_expired  = False
             dirty = True
 
         # Start the clock when the start sequence has finished announcing "fence"
