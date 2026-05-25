@@ -115,9 +115,11 @@ def _draw_delta(surface: pygame.Surface, delta_ms: int, first_left,
         pygame.draw.polygon(surface, color, points)
 
 
-def _draw_indicator_bar(surface: pygame.Surface, cx: int, cy: int, w: int, h: int, color):
-    rect = pygame.Rect(cx - w // 2, cy - h // 2, w, h)
-    pygame.draw.rect(surface, color, rect, border_radius=8)
+def _draw_indicator_bar(surface: pygame.Surface, cx: int, cy: int, w: int, h: int,
+                        color, filled: bool):
+    rect       = pygame.Rect(cx - w // 2, cy - h // 2, w, h)
+    line_width = 0 if filled else config.INDICATOR_OUTLINE_WIDTH
+    pygame.draw.rect(surface, color, rect, line_width, border_radius=8)
 
 
 def _draw_indicators(surface: pygame.Surface, state: BoutState, now_ms: int, sw: int, sh: int):
@@ -131,17 +133,21 @@ def _draw_indicators(surface: pygame.Surface, state: BoutState, now_ms: int, sw:
     # On-target bars — both sides share a single window; they extinguish together
     window_open   = (state.hit_window_start is not None and
                      (now_ms - state.hit_window_start) < config.HIT_INDICATOR_DURATION_MS)
-    left_on_color  = config.RED_BRIGHT   if (window_open and state.hit_left_active)  else config.RED_DIM
-    right_on_color = config.GREEN_BRIGHT if (window_open and state.hit_right_active) else config.GREEN_DIM
-    _draw_indicator_bar(surface, left_cx,  ind_y, bar_w, bar_h, left_on_color)
-    _draw_indicator_bar(surface, right_cx, ind_y, bar_w, bar_h, right_on_color)
+    left_on_lit   = window_open and state.hit_left_active
+    right_on_lit  = window_open and state.hit_right_active
+    left_on_color  = config.RED_BRIGHT   if left_on_lit  else config.RED_DIM
+    right_on_color = config.GREEN_BRIGHT if right_on_lit else config.GREEN_DIM
+    _draw_indicator_bar(surface, left_cx,  ind_y, bar_w, bar_h, left_on_color,  filled=left_on_lit)
+    _draw_indicator_bar(surface, right_cx, ind_y, bar_w, bar_h, right_on_color, filled=right_on_lit)
 
     # Off-target bars — share the same window; extinguish simultaneously with on-target bars
     white_y = ind_y - bar_h - 10
-    left_white_color  = config.YELLOW_BRIGHT if (window_open and state.white_left_active)  else config.YELLOW_DIM
-    right_white_color = config.YELLOW_BRIGHT if (window_open and state.white_right_active) else config.YELLOW_DIM
-    _draw_indicator_bar(surface, left_cx,  white_y, bar_w, bar_h // 2, left_white_color)
-    _draw_indicator_bar(surface, right_cx, white_y, bar_w, bar_h // 2, right_white_color)
+    left_white_lit  = window_open and state.white_left_active
+    right_white_lit = window_open and state.white_right_active
+    left_white_color  = config.YELLOW_BRIGHT if left_white_lit  else config.YELLOW_DIM
+    right_white_color = config.YELLOW_BRIGHT if right_white_lit else config.YELLOW_DIM
+    _draw_indicator_bar(surface, left_cx,  white_y, bar_w, bar_h // 2, left_white_color,  filled=left_white_lit)
+    _draw_indicator_bar(surface, right_cx, white_y, bar_w, bar_h // 2, right_white_color, filled=right_white_lit)
 
 
 # ---------------------------------------------------------------------------

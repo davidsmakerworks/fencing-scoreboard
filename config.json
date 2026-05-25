@@ -38,16 +38,17 @@
     "clock_x_frac":       0.50,
     "clock_y_frac":       0.20,
     "delta_y_frac":       0.38,
-    "indicator_w_frac":   0.22,
-    "indicator_h_frac":   0.110,
-    "indicator_y_frac":   0.80,
+    "indicator_w_frac":        0.22,
+    "indicator_h_frac":        0.110,
+    "indicator_y_frac":        0.80,
+    "indicator_outline_width": 3,
     "pie_radius":         70,
     "pie_center_y_frac":  0.50
   },
 
   "timing": {
     "hit_window_ms":            300,
-    "hit_indicator_duration_ms": 2500,
+    "hit_indicator_duration_ms": 3000,
     "delta_display_ms":         10000,
     "disconnect_hit_count":     3,
     "disconnect_window_ms":     12500,
