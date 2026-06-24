@@ -216,7 +216,7 @@ def _draw_system_failure(surface: pygame.Surface, error_msg: str):
 
     # Error detail along the bottom (smaller text)
     if error_msg:
-        detail = _render_cached("failure_detail", error_msg[:80], config.GRAY)
+        detail = _render_cached("failure_detail", error_msg[:160], config.GRAY)
         surface.blit(detail, detail.get_rect(centerx=cx, bottom=sh - 20))
 
 
