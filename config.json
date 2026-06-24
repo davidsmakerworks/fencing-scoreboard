@@ -124,6 +124,14 @@
           {"frequency": 0,   "duration_ms": 80}
         ],
         "repeats": 6
+      },
+      "victory_fanfare": {
+        "notes": [
+          {"frequency": 523,  "duration_ms": 150},
+          {"frequency": 659,  "duration_ms": 150},
+          {"frequency": 784,  "duration_ms": 150},
+          {"frequency": 1047, "duration_ms": 500}
+        ]
       }
     }
   }

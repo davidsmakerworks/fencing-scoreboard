@@ -140,6 +140,7 @@ Button numbering starts at 0. Consult your controller's documentation or use a g
 | `tones.reset` | Fallback tone `{frequency, duration_ms}` when WAV is absent |
 | `tones.touch` | Tone sequence `{notes}` used when touch WAV is absent or `disable_voice` is set — each note is `{frequency, duration_ms}` |
 | `tones.halt_beeps` | Tone sequence for `halt_file` — `{notes, repeats}` generating a rapid beep sequence; used when WAV is absent or `disable_voice` is set |
+| `tones.victory_fanfare` | Tone sequence `{notes}` played after a bout win when `disable_voice` is set, in place of the spoken winner announcement. Default is a four-note ascending C major arpeggio (C5–E5–G5–C6). |
 
 #### `audio.announcement` — speech-cadence gaps
 | Key | Default | Description |

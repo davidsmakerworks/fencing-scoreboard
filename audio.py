@@ -140,6 +140,9 @@ class AudioManager:
             i: _voice_optional(_p(word)) for i, word in enumerate(_NUMBER_WORDS)
         }
 
+        # Victory fanfare — always synthesised; only enqueued when disable_voice is set
+        self._victory_fanfare = _generate_sequence(config.TONE_VICTORY_FANFARE["notes"])
+
         # Announcement queue: list of (play_at_ms, Sound), sorted by play_at_ms
         self._queue: list[tuple[float, pygame.mixer.Sound]] = []
 
@@ -208,7 +211,8 @@ class AudioManager:
                                      winner_score: int, loser_score: int,
                                      now_ms: int) -> int:
         """
-        Queue: touch call → "the winner is" → fencer name → "the final score is" → score.
+        Voice mode:  touch call → "the winner is" → fencer name → "the final score is" → score.
+        Tone mode:   touch call → victory fanfare.
         Returns the suggested winner_reset_at timestamp (ms) — after the last sound
         plus a 1-second buffer.
         """
@@ -217,6 +221,13 @@ class AudioManager:
 
         touch = self._touch_left if winner_is_left else self._touch_right
         t = self._enqueue(t, touch)
+
+        if config.DISABLE_VOICE:
+            t += config.ANNOUNCE_GAP_BETWEEN_WORDS
+            t = self._enqueue(t, self._victory_fanfare)
+            t += 1000.0
+            return int(t)
+
         t += config.ANNOUNCE_GAP_AFTER_TOUCH
 
         t = self._enqueue(t, self._the_winner_is)
@@ -262,7 +273,8 @@ class AudioManager:
     def schedule_time_expired_announcement(self, left_score: int, right_score: int,
                                             now_ms: int) -> int:
         """
-        Queue: halt → time-expired phrase → winner announcement (or tie score).
+        Voice mode: halt → time-expired phrase → winner announcement (or tie score).
+        Tone mode:  halt → victory fanfare (winner) or halt only (tie).
         Winner is determined by the higher score regardless of bout_win_score.
         Returns the suggested winner_reset_at timestamp (ms).
         """
@@ -270,6 +282,14 @@ class AudioManager:
         t = float(now_ms)
 
         t = self._enqueue(t, self._halt)
+
+        if config.DISABLE_VOICE:
+            if left_score != right_score:
+                t += config.ANNOUNCE_GAP_BETWEEN_WORDS
+                t = self._enqueue(t, self._victory_fanfare)
+            t += 1000.0
+            return int(t)
+
         t += config.ANNOUNCE_GAP_BETWEEN_WORDS
 
         t = self._enqueue(t, self._time_expired_sound)

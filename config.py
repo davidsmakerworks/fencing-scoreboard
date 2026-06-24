@@ -105,8 +105,9 @@ SOUND_FENCE          = _c["audio"]["fence_file"]
 TONE_HIT_ON_TARGET  = _c["audio"]["tones"]["hit_on_target"]
 TONE_HIT_OFF_TARGET = _c["audio"]["tones"]["hit_off_target"]
 TONE_RESET          = _c["audio"]["tones"]["reset"]
-TONE_TOUCH          = _c["audio"]["tones"]["touch"]
-TONE_HALT_BEEPS     = _c["audio"]["tones"]["halt_beeps"]
+TONE_TOUCH           = _c["audio"]["tones"]["touch"]
+TONE_HALT_BEEPS      = _c["audio"]["tones"]["halt_beeps"]
+TONE_VICTORY_FANFARE = _c["audio"]["tones"]["victory_fanfare"]
 
 # Announcement speech-cadence gaps (ms)
 ANNOUNCE_GAP_AFTER_TOUCH       = _c["audio"]["announcement"]["gap_after_touch_ms"]

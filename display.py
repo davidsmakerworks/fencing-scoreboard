@@ -29,10 +29,11 @@ def _resolve_font(names: list, size: int, bold: bool = False) -> pygame.font.Fon
 
 def load_fonts():
     """Call once after pygame.init() to populate the font cache."""
-    _fonts["score"]  = _resolve_font(config.SCORE_FONT_NAMES,  config.SCORE_FONT_SIZE,  config.SCORE_FONT_BOLD)
-    _fonts["clock"]  = _resolve_font(config.CLOCK_FONT_NAMES,  config.CLOCK_FONT_SIZE,  config.CLOCK_FONT_BOLD)
-    _fonts["delta"]  = _resolve_font(config.DELTA_FONT_NAMES,  config.DELTA_FONT_SIZE,  config.DELTA_FONT_BOLD)
-    _fonts["status"] = _resolve_font(config.STATUS_FONT_NAMES, config.STATUS_FONT_SIZE, config.STATUS_FONT_BOLD)
+    _fonts["score"]          = _resolve_font(config.SCORE_FONT_NAMES,  config.SCORE_FONT_SIZE,  config.SCORE_FONT_BOLD)
+    _fonts["clock"]          = _resolve_font(config.CLOCK_FONT_NAMES,  config.CLOCK_FONT_SIZE,  config.CLOCK_FONT_BOLD)
+    _fonts["delta"]          = _resolve_font(config.DELTA_FONT_NAMES,  config.DELTA_FONT_SIZE,  config.DELTA_FONT_BOLD)
+    _fonts["status"]         = _resolve_font(config.STATUS_FONT_NAMES, config.STATUS_FONT_SIZE, config.STATUS_FONT_BOLD)
+    _fonts["failure_detail"] = _resolve_font(config.STATUS_FONT_NAMES, int(config.STATUS_FONT_SIZE * 0.35), config.STATUS_FONT_BOLD)
 
 
 def _render_cached(font_key: str, text: str, color) -> pygame.Surface:
@@ -213,9 +214,9 @@ def _draw_system_failure(surface: pygame.Surface, error_msg: str):
     surface.blit(sys_surf,  sys_rect)
     surface.blit(fail_surf, fail_rect)
 
-    # Error detail along the bottom
+    # Error detail along the bottom (smaller text)
     if error_msg:
-        detail = _render_cached("status", error_msg[:80], config.GRAY)
+        detail = _render_cached("failure_detail", error_msg[:80], config.GRAY)
         surface.blit(detail, detail.get_rect(centerx=cx, bottom=sh - 20))
 
 
