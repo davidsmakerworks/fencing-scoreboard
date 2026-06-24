@@ -39,9 +39,24 @@
   },
 
   "fonts": {
-    "score_size": 380,
-    "clock_size": 140,
-    "delta_size": 60
+    "score": {
+      "names": ["Arial", "Liberation Sans", "DejaVu Sans", "Noto Sans", "FreeSans"],
+      "size": 380,
+      "bold": true
+    },
+    "clock": {
+      "names": ["Arial", "Liberation Sans", "DejaVu Sans", "Noto Sans", "FreeSans"],
+      "size": 140,
+      "bold": true
+    },
+    "delta": {
+      "names": ["Arial", "Liberation Sans", "DejaVu Sans", "Noto Sans", "FreeSans"],
+      "size": 60
+    },
+    "status": {
+      "names": ["Arial", "Liberation Sans", "DejaVu Sans", "Noto Sans", "FreeSans"],
+      "size": 60
+    }
   },
 
   "layout": {
@@ -74,6 +89,7 @@
   },
 
   "audio": {
+    "disable_voice": false,
     "hit_on_target_file":  "sounds/hit_on_target.wav",
     "hit_off_target_file": "sounds/hit_off_target.wav",
     "reset_file":          "sounds/reset.wav",

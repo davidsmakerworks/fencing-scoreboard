@@ -26,6 +26,10 @@ OP_CLOCK_SET       = 0x43  # uint16 payload: seconds
 # Opcodes that carry a big-endian uint16 payload immediately after the opcode byte
 UINT16_PAYLOAD_OPS = {OP_DELTA_TIME, OP_CLOCK_SET}
 
+# Internal sentinel pushed into the command queue by the serial thread on failure.
+# Never sent by hardware; safe to use as 0xFF is not a valid frame opcode.
+OP_SERIAL_ERROR = 0xFF
+
 # Human-readable names (used for logging and demo mode)
 OPCODE_NAMES = {
     OP_SCORE_LEFT_INC:  "SCORE_LEFT_INC",

@@ -29,10 +29,22 @@ DARK_GRAY     = _rgb("dark_gray")
 CLOCK_COLOR   = _rgb("clock_color")
 DELTA_COLOR   = _rgb("delta_color")
 
-# --- Font sizes ---
-SCORE_FONT_SIZE = _c["fonts"]["score_size"]
-CLOCK_FONT_SIZE = _c["fonts"]["clock_size"]
-DELTA_FONT_SIZE = _c["fonts"]["delta_size"]
+# --- Fonts (names list + size; bold optional, defaults False) ---
+SCORE_FONT_NAMES = _c["fonts"]["score"]["names"]
+SCORE_FONT_SIZE  = _c["fonts"]["score"]["size"]
+SCORE_FONT_BOLD  = _c["fonts"]["score"].get("bold", False)
+
+CLOCK_FONT_NAMES = _c["fonts"]["clock"]["names"]
+CLOCK_FONT_SIZE  = _c["fonts"]["clock"]["size"]
+CLOCK_FONT_BOLD  = _c["fonts"]["clock"].get("bold", False)
+
+DELTA_FONT_NAMES = _c["fonts"]["delta"]["names"]
+DELTA_FONT_SIZE  = _c["fonts"]["delta"]["size"]
+DELTA_FONT_BOLD  = _c["fonts"]["delta"].get("bold", False)
+
+STATUS_FONT_NAMES = _c["fonts"]["status"]["names"]
+STATUS_FONT_SIZE  = _c["fonts"]["status"]["size"]
+STATUS_FONT_BOLD  = _c["fonts"]["status"].get("bold", False)
 
 # --- Layout fractions ---
 SCORE_Y_FRAC       = _c["layout"]["score_y_frac"]
@@ -76,6 +88,7 @@ DEFAULT_PORT = _c["serial"]["default_port"]
 DEFAULT_BAUD = _c["serial"]["default_baud"]
 
 # --- Audio ---
+DISABLE_VOICE        = _c["audio"]["disable_voice"]
 MIXER_BUFFER         = _c["audio"]["mixer_buffer"]
 SOUND_HIT_ON_TARGET  = _c["audio"]["hit_on_target_file"]
 SOUND_HIT_OFF_TARGET = _c["audio"]["hit_off_target_file"]

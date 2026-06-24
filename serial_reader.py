@@ -57,13 +57,18 @@ def _reader_loop(port_name: str, baud: int, cmd_queue: queue.Queue, stop_event: 
                 cmd_queue.put((opcode, payload))
     except serial.SerialException as exc:
         log.error("Serial error: %s", exc)
+        cmd_queue.put((opcodes.OP_SERIAL_ERROR, str(exc)))
 
 
 def start_serial_reader(port_name: str, baud: int, cmd_queue: queue.Queue) -> threading.Event:
     """
-    Spawn a daemon thread that reads from *port_name* and pushes commands into
-    *cmd_queue*.  Returns a stop_event that the caller can set to request shutdown.
+    Probe-open the serial port synchronously, then spawn a daemon reader thread.
+    Raises serial.SerialException immediately if the port cannot be opened — the
+    caller should treat this as a fatal startup error.
+    Returns a stop_event that the caller can set to request shutdown.
     """
+    serial.Serial(port_name, baud, timeout=0.1).close()
+
     stop_event = threading.Event()
     thread = threading.Thread(
         target=_reader_loop,

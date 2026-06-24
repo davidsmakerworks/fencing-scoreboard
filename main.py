@@ -5,6 +5,7 @@ import queue
 import sys
 import logging
 import pygame
+import serial
 
 import config
 import opcodes
@@ -306,8 +307,12 @@ def main():
 
     # --- Serial (skipped in demo mode) ---
     if not args.demo:
-        start_serial_reader(args.port, args.baud, cmd_queue)
-        log.info("Serial reader started on %s @ %d", args.port, args.baud)
+        try:
+            start_serial_reader(args.port, args.baud, cmd_queue)
+            log.info("Serial reader started on %s @ %d", args.port, args.baud)
+        except serial.SerialException as exc:
+            pygame.quit()
+            sys.exit(f"ERROR: Cannot open serial port {args.port}: {exc}")
     else:
         log.info("Demo mode active — use keyboard keys to inject events (see README)")
 
@@ -376,7 +381,12 @@ def main():
                 opcode, payload = cmd_queue.get_nowait()
             except queue.Empty:
                 break
-            apply_command(opcode, payload, state, audio_mgr, detector, now_ms)
+            if opcode == opcodes.OP_SERIAL_ERROR:
+                log.error("Serial failure: %s", payload)
+                state.serial_failed    = True
+                state.serial_error_msg = payload
+            else:
+                apply_command(opcode, payload, state, audio_mgr, detector, now_ms)
             dirty = True
 
         # Tick the clock — only dirty when the displayed MM:SS value changes

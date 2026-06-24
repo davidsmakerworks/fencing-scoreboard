@@ -17,12 +17,22 @@ _fonts: dict = {}
 _text_cache: dict = {}
 
 
+def _resolve_font(names: list, size: int, bold: bool = False) -> pygame.font.Font:
+    """Return the first available system font from names, or the pygame default."""
+    available = set(pygame.font.get_fonts())
+    for name in names:
+        normalized = name.lower().replace(" ", "").replace("-", "")
+        if normalized in available:
+            return pygame.font.SysFont(name, size, bold=bold)
+    return pygame.font.SysFont(None, size, bold=bold)
+
+
 def load_fonts():
     """Call once after pygame.init() to populate the font cache."""
-    _fonts["score"]  = pygame.font.SysFont("Arial", config.SCORE_FONT_SIZE, bold=True)
-    _fonts["clock"]  = pygame.font.SysFont("Arial", config.CLOCK_FONT_SIZE, bold=True)
-    _fonts["delta"]  = pygame.font.SysFont("Arial", config.DELTA_FONT_SIZE)
-    _fonts["status"] = pygame.font.SysFont("Arial", config.DELTA_FONT_SIZE)
+    _fonts["score"]  = _resolve_font(config.SCORE_FONT_NAMES,  config.SCORE_FONT_SIZE,  config.SCORE_FONT_BOLD)
+    _fonts["clock"]  = _resolve_font(config.CLOCK_FONT_NAMES,  config.CLOCK_FONT_SIZE,  config.CLOCK_FONT_BOLD)
+    _fonts["delta"]  = _resolve_font(config.DELTA_FONT_NAMES,  config.DELTA_FONT_SIZE,  config.DELTA_FONT_BOLD)
+    _fonts["status"] = _resolve_font(config.STATUS_FONT_NAMES, config.STATUS_FONT_SIZE, config.STATUS_FONT_BOLD)
 
 
 def _render_cached(font_key: str, text: str, color) -> pygame.Surface:
@@ -172,11 +182,52 @@ def _draw_status_message(surface: pygame.Surface, message: str, sw: int, sh: int
     surface.blit(surf, rect)
 
 
+def _draw_system_failure(surface: pygame.Surface, error_msg: str):
+    sw, sh = surface.get_size()
+    surface.fill(config.BLACK)
+
+    cx = sw // 2
+
+    # Warning triangle pointing upward
+    tri_h   = sh // 6
+    tri_w   = int(tri_h * 1.155)   # equilateral proportions
+    tri_top = sh // 8
+    tip = (cx,              tri_top)
+    bl  = (cx - tri_w // 2, tri_top + tri_h)
+    br  = (cx + tri_w // 2, tri_top + tri_h)
+    pygame.draw.polygon(surface, config.YELLOW_BRIGHT, [tip, bl, br])
+    pygame.draw.polygon(surface, config.BLACK, [tip, bl, br], 4)
+
+    # "!" centred inside the triangle
+    excl = _render_cached("status", "!", config.BLACK)
+    excl_rect = excl.get_rect(center=(cx, tri_top + tri_h * 2 // 3))
+    surface.blit(excl, excl_rect)
+
+    # "SYSTEM" and "FAILURE" in large red text
+    sys_surf  = _render_cached("clock", "SYSTEM",  config.RED_BRIGHT)
+    fail_surf = _render_cached("clock", "FAILURE", config.RED_BRIGHT)
+    line_gap  = sh // 25
+    text_top  = tri_top + tri_h + sh // 20
+    sys_rect  = sys_surf.get_rect(centerx=cx, top=text_top)
+    fail_rect = fail_surf.get_rect(centerx=cx, top=sys_rect.bottom + line_gap)
+    surface.blit(sys_surf,  sys_rect)
+    surface.blit(fail_surf, fail_rect)
+
+    # Error detail along the bottom
+    if error_msg:
+        detail = _render_cached("status", error_msg[:80], config.GRAY)
+        surface.blit(detail, detail.get_rect(centerx=cx, bottom=sh - 20))
+
+
 # ---------------------------------------------------------------------------
 # Public render function
 # ---------------------------------------------------------------------------
 
 def render(surface: pygame.Surface, state: BoutState, now_ms: int):
+    if state.serial_failed:
+        _draw_system_failure(surface, state.serial_error_msg or "")
+        return
+
     sw, sh = surface.get_size()
     surface.fill(config.BLACK)
 

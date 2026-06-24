@@ -65,6 +65,20 @@ def _load_optional(path: str) -> pygame.mixer.Sound | None:
     return None
 
 
+def _voice_optional(path: str) -> pygame.mixer.Sound | None:
+    """Like _load_optional, but returns None immediately when disable_voice is set."""
+    if config.DISABLE_VOICE:
+        return None
+    return _load_optional(path)
+
+
+def _voice_or_generate_sequence(path: str, notes: list, repeats: int = 1) -> pygame.mixer.Sound:
+    """Like _load_or_generate_sequence, but forces tone generation when disable_voice is set."""
+    if config.DISABLE_VOICE:
+        return _generate_sequence(notes, repeats)
+    return _load_or_generate_sequence(path, notes, repeats)
+
+
 # ---------------------------------------------------------------------------
 # AudioManager
 # ---------------------------------------------------------------------------
@@ -97,36 +111,33 @@ class AudioManager:
         def _p(name: str) -> str:
             return str(_sd / f"{name}.wav")
 
-        # Touch calls — configurable paths, with a generated fallback
-        self._touch_left  = _load_or_generate_sequence(config.SOUND_TOUCH_LEFT,
-                                                        config.TONE_TOUCH["notes"])
-        self._touch_right = _load_or_generate_sequence(config.SOUND_TOUCH_RIGHT,
-                                                        config.TONE_TOUCH["notes"])
+        # Touch calls — voice WAV if present and not disabled, otherwise synthesised tone
+        self._touch_left  = _voice_or_generate_sequence(config.SOUND_TOUCH_LEFT,
+                                                         config.TONE_TOUCH["notes"])
+        self._touch_right = _voice_or_generate_sequence(config.SOUND_TOUCH_RIGHT,
+                                                         config.TONE_TOUCH["notes"])
 
-        # Halt: WAV if present, otherwise 6 rapid synthesised beeps
-        self._halt = _load_or_generate_sequence(config.SOUND_HALT,
-                                                 config.TONE_HALT_BEEPS["notes"],
-                                                 config.TONE_HALT_BEEPS["repeats"])
+        # Halt: voice WAV if present and not disabled, otherwise synthesised beeps
+        self._halt = _voice_or_generate_sequence(config.SOUND_HALT,
+                                                  config.TONE_HALT_BEEPS["notes"],
+                                                  config.TONE_HALT_BEEPS["repeats"])
 
-        # Time-expired phrase (optional; skipped if WAV absent)
-        self._time_expired_sound = _load_optional(config.SOUND_TIME_EXPIRED)
+        # Remaining items are pure voice — all silenced when disable_voice is set
+        self._time_expired_sound = _voice_optional(config.SOUND_TIME_EXPIRED)
 
-        # Start-sequence phrases (all optional; step is skipped if WAV absent)
-        self._en_garde = _load_optional(config.SOUND_EN_GARDE)
-        self._ready    = _load_optional(config.SOUND_READY)
-        self._fence    = _load_optional(config.SOUND_FENCE)
+        self._en_garde = _voice_optional(config.SOUND_EN_GARDE)
+        self._ready    = _voice_optional(config.SOUND_READY)
+        self._fence    = _voice_optional(config.SOUND_FENCE)
 
-        # Fixed phrase files (no fallback — all present in sounds/)
-        self._the_score_is       = _load_optional(_p("the_score_is"))
-        self._the_final_score_is = _load_optional(_p("the_final_score_is"))
-        self._the_winner_is      = _load_optional(_p("the_winner_is"))
-        self._fencer_left        = _load_optional(_p("the_fencer_to_my_left"))
-        self._fencer_right       = _load_optional(_p("the_fencer_to_my_right"))
-        self._all                = _load_optional(_p("all"))
+        self._the_score_is       = _voice_optional(_p("the_score_is"))
+        self._the_final_score_is = _voice_optional(_p("the_final_score_is"))
+        self._the_winner_is      = _voice_optional(_p("the_winner_is"))
+        self._fencer_left        = _voice_optional(_p("the_fencer_to_my_left"))
+        self._fencer_right       = _voice_optional(_p("the_fencer_to_my_right"))
+        self._all                = _voice_optional(_p("all"))
 
-        # Number sounds: {0: Sound, 1: Sound, ...}
         self._numbers: dict[int, pygame.mixer.Sound | None] = {
-            i: _load_optional(_p(word)) for i, word in enumerate(_NUMBER_WORDS)
+            i: _voice_optional(_p(word)) for i, word in enumerate(_NUMBER_WORDS)
         }
 
         # Announcement queue: list of (play_at_ms, Sound), sorted by play_at_ms

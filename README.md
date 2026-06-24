@@ -123,22 +123,23 @@ Button numbering starts at 0. Consult your controller's documentation or use a g
 ### `audio`
 | Key | Description |
 |-----|-------------|
+| `disable_voice` | `true` to suppress all spoken-word announcements and use synthesised tones only, even if WAV files are present. Hit buzzer and reset sounds are unaffected. Default: `false`. |
 | `hit_on_target_file` | WAV played immediately on an on-target hit |
 | `hit_off_target_file` | WAV played immediately on an off-target (white) hit |
 | `reset_file` | WAV played on score reset |
 | `touch_left_file` | Touch call played at the start of a point or winner announcement for the left (red) fencer |
 | `touch_right_file` | Touch call played at the start of a point or winner announcement for the right (green) fencer |
-| `mixer_buffer` | SDL audio buffer size in samples (increase if audio crackles; 2048 recommended for Pi) |
 | `halt_file` | WAV played (or queued) when the countdown clock reaches zero |
-| `time_expired_file` | Phrase WAV played after the halt sound at time expiry (skipped if absent) |
-| `en_garde_file` | First call in the start sequence (skipped if absent) |
-| `ready_file` | Second call in the start sequence (skipped if absent) |
-| `fence_file` | Third call in the start sequence; clock starts when it finishes (skipped if absent) |
+| `time_expired_file` | Phrase WAV played after the halt sound at time expiry (skipped if absent or `disable_voice` is set) |
+| `en_garde_file` | First call in the start sequence (skipped if absent or `disable_voice` is set) |
+| `ready_file` | Second call in the start sequence (skipped if absent or `disable_voice` is set) |
+| `fence_file` | Third call in the start sequence; clock starts when it finishes (skipped if absent or `disable_voice` is set) |
+| `mixer_buffer` | SDL audio buffer size in samples (increase if audio crackles; 2048 recommended for Pi) |
 | `tones.hit_on_target` | Fallback tone `{frequency, duration_ms}` when WAV is absent |
 | `tones.hit_off_target` | Fallback tone `{frequency, duration_ms}` when WAV is absent |
 | `tones.reset` | Fallback tone `{frequency, duration_ms}` when WAV is absent |
-| `tones.touch` | Fallback sequence `{notes}` when touch WAV is absent — each note is `{frequency, duration_ms}` |
-| `tones.halt_beeps` | Fallback for `halt_file` — `{notes, repeats}` generating a rapid beep sequence |
+| `tones.touch` | Tone sequence `{notes}` used when touch WAV is absent or `disable_voice` is set — each note is `{frequency, duration_ms}` |
+| `tones.halt_beeps` | Tone sequence for `halt_file` — `{notes, repeats}` generating a rapid beep sequence; used when WAV is absent or `disable_voice` is set |
 
 #### `audio.announcement` — speech-cadence gaps
 | Key | Default | Description |
@@ -149,8 +150,29 @@ Button numbering starts at 0. Consult your controller's documentation or use a g
 | `gap_score_to_all_ms` | 100 | Shorter pause before "all" when scores are tied |
 | `gap_after_winner_name_ms` | 400 | Pause after the fencer name before "the final score is" |
 
-### `layout`, `fonts`, `colors`
-Fractional screen-position values, font sizes, and RGB color tuples.
+### `fonts`
+
+Each of the four text elements is configured independently as an object:
+
+```json
+"score": { "names": ["Arial", "Liberation Sans", "DejaVu Sans"], "size": 380, "bold": true }
+```
+
+| Key | Description |
+|-----|-------------|
+| `names` | Ordered list of font family names. The first name that is installed on the system is used. This allows a single config to work on Windows (where Arial is available) and Linux (where Liberation Sans or DejaVu Sans are typically present). If none of the listed names are found, pygame's built-in default font is used as a final fallback. |
+| `size` | Point size |
+| `bold` | `true` for bold weight; omit or `false` for regular weight |
+
+| Font element | Used for |
+|--------------|----------|
+| `score` | Fencer score digits |
+| `clock` | Countdown clock |
+| `delta` | Δt value and label |
+| `status` | Status messages (score-limit change, etc.) and the SYSTEM FAILURE banner |
+
+### `layout` and `colors`
+Fractional screen-position values and RGB color tuples.
 All layout values are fractions of the screen dimensions so the display
 scales automatically when `width`/`height` change.
 
@@ -203,6 +225,11 @@ If a touch WAV file is missing, a synthesised two-tone sequence is used as a fal
 (configurable under `audio.tones.touch` in `config.json`).
 If any phrase or number WAV file is missing, that item is silently skipped in the
 announcement sequence.
+
+Setting `disable_voice: true` in `config.json` suppresses all of the above and
+forces the synthesised tone fallbacks for touch and halt, regardless of whether
+the WAV files are present. The immediate sounds (hit buzzer, reset beep) are not
+affected by this setting.
 
 ---
 
@@ -314,6 +341,30 @@ Opcode constants are defined in [`opcodes.py`](opcodes.py).
 
 ---
 
+## Serial errors
+
+### Startup failure
+If the serial port cannot be opened when the application starts (wrong port name,
+permission denied, device not connected), the application exits immediately and
+prints an error to stderr. Example:
+
+```
+ERROR: Cannot open serial port /dev/ttyUSB0: [Errno 2] No such file or directory
+```
+
+This is not a recoverable error. Check that the device is connected and the port
+name matches what is configured (or passed via `--port`). Use `--demo` to run
+without hardware.
+
+### Runtime failure
+If the serial connection is lost after startup (e.g. the USB cable is unplugged),
+the display switches to a full-screen **SYSTEM / FAILURE** banner with a warning
+icon and the error detail along the bottom. Scoring and all controls other than
+Escape remain active, but no further data can be received from the hardware module.
+Restart the application to reconnect.
+
+---
+
 ## Disconnect detection
 
 Continuous hit signals caused by a disconnected foil will mute the
@@ -348,7 +399,7 @@ timer.
 
 ## Start sequence
 
-Pressing the start-sequence button (default: gamepad button 4, or **Space** on keyboard)
+Pressing the start-sequence button (default: gamepad button **0**, or **Space** on keyboard)
 launches the pre-bout announcement sequence:
 
 1. **Pause** — `initial_delay_ms` (default 2 s) after the button press.

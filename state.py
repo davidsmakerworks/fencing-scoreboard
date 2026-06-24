@@ -47,6 +47,10 @@ class BoutState:
     status_message: Optional[str] = None
     status_message_until: Optional[int] = None
 
+    # Set when the serial reader thread encounters an unrecoverable error
+    serial_failed: bool = False
+    serial_error_msg: Optional[str] = None
+
     def reset_scores(self):
         self.score_left      = 0
         self.score_right     = 0
