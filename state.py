@@ -51,6 +51,15 @@ class BoutState:
     serial_failed: bool = False
     serial_error_msg: Optional[str] = None
 
+    # Shortest/longest hit interval recorded for each fencer, measured as the
+    # delta (from OP_DELTA_TIME) when that fencer was the SECOND to hit in an
+    # exchange. Persist for the life of the program; never reset by a bout or
+    # score reset.
+    interval_min_left:  Optional[int] = None
+    interval_max_left:  Optional[int] = None
+    interval_min_right: Optional[int] = None
+    interval_max_right: Optional[int] = None
+
     def reset_scores(self):
         self.score_left      = 0
         self.score_right     = 0

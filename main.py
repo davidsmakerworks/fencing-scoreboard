@@ -239,6 +239,19 @@ def apply_command(opcode: int, payload, state: BoutState,
     elif opcode == opcodes.OP_DELTA_TIME:
         state.delta_ms       = payload
         state.delta_set_time = now_ms
+        # Attribute the interval to whichever fencer hit SECOND; skip zero-ms
+        # and simultaneous (first_left is None) hits, which have no "second" fencer.
+        if payload and state.delta_first_left is not None:
+            if state.delta_first_left:
+                if state.interval_min_right is None or payload < state.interval_min_right:
+                    state.interval_min_right = payload
+                if state.interval_max_right is None or payload > state.interval_max_right:
+                    state.interval_max_right = payload
+            else:
+                if state.interval_min_left is None or payload < state.interval_min_left:
+                    state.interval_min_left = payload
+                if state.interval_max_left is None or payload > state.interval_max_left:
+                    state.interval_max_left = payload
 
     elif opcode == opcodes.OP_CLOCK_START:
         state.clock_running = True

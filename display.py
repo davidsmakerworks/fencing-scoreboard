@@ -34,6 +34,7 @@ def load_fonts():
     _fonts["delta"]          = _resolve_font(config.DELTA_FONT_NAMES,  config.DELTA_FONT_SIZE,  config.DELTA_FONT_BOLD)
     _fonts["status"]         = _resolve_font(config.STATUS_FONT_NAMES, config.STATUS_FONT_SIZE, config.STATUS_FONT_BOLD)
     _fonts["failure_detail"] = _resolve_font(config.STATUS_FONT_NAMES, int(config.STATUS_FONT_SIZE * 0.35), config.STATUS_FONT_BOLD)
+    _fonts["interval"]       = _resolve_font(config.STATUS_FONT_NAMES, int(config.STATUS_FONT_SIZE * 0.7),  config.STATUS_FONT_BOLD)
 
 
 def _render_cached(font_key: str, text: str, color) -> pygame.Surface:
@@ -177,6 +178,29 @@ def _draw_indicators(surface: pygame.Surface, state: BoutState, now_ms: int, sw:
     _draw_indicator_bar(surface, right_cx, white_y, bar_w, bar_h // 2, right_white_color, filled=right_white_lit)
 
 
+def _format_interval(min_ms, max_ms) -> str:
+    min_s = f"{min_ms} ms" if min_ms is not None else "--- ms"
+    max_s = f"{max_ms} ms" if max_ms is not None else "--- ms"
+    return f"{min_s} / {max_s}"
+
+
+def _draw_interval_stats(surface: pygame.Surface, state: BoutState, sw: int, sh: int):
+    bar_h = int(config.INDICATOR_H_FRAC * sh)
+    ind_y = int(config.INDICATOR_Y_FRAC * sh)
+    text_y = ind_y + bar_h // 2 + 24
+
+    left_cx  = int(config.LEFT_SCORE_X_FRAC  * sw)
+    right_cx = int(config.RIGHT_SCORE_X_FRAC * sw)
+
+    left_text  = _format_interval(state.interval_min_left,  state.interval_max_left)
+    right_text = _format_interval(state.interval_min_right, state.interval_max_right)
+
+    left_surf  = _render_cached("interval", left_text,  config.GRAY)
+    right_surf = _render_cached("interval", right_text, config.GRAY)
+    surface.blit(left_surf,  left_surf.get_rect(center=(left_cx,  text_y)))
+    surface.blit(right_surf, right_surf.get_rect(center=(right_cx, text_y)))
+
+
 def _draw_status_message(surface: pygame.Surface, message: str, sw: int, sh: int):
     surf = _render_cached("status", message, config.WHITE)
     rect = surf.get_rect(centerx=sw // 2, bottom=sh - 20)
@@ -250,6 +274,9 @@ def render(surface: pygame.Surface, state: BoutState, now_ms: int):
 
     # Hit indicator bars
     _draw_indicators(surface, state, now_ms, sw, sh)
+
+    # Shortest/longest hit interval per fencer (persists across bouts)
+    _draw_interval_stats(surface, state, sw, sh)
 
     # Transient status message (e.g. score limit change)
     if state.status_message is not None:
