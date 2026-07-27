@@ -34,7 +34,7 @@ def load_fonts():
     _fonts["delta"]          = _resolve_font(config.DELTA_FONT_NAMES,  config.DELTA_FONT_SIZE,  config.DELTA_FONT_BOLD)
     _fonts["status"]         = _resolve_font(config.STATUS_FONT_NAMES, config.STATUS_FONT_SIZE, config.STATUS_FONT_BOLD)
     _fonts["failure_detail"] = _resolve_font(config.STATUS_FONT_NAMES, int(config.STATUS_FONT_SIZE * 0.35), config.STATUS_FONT_BOLD)
-    _fonts["interval"]       = _resolve_font(config.STATUS_FONT_NAMES, int(config.STATUS_FONT_SIZE * 0.7),  config.STATUS_FONT_BOLD)
+    _fonts["interval"]       = _resolve_font(config.INTERVAL_FONT_NAMES, config.INTERVAL_FONT_SIZE, config.INTERVAL_FONT_BOLD)
 
 
 def _render_cached(font_key: str, text: str, color) -> pygame.Surface:

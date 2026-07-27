@@ -46,6 +46,10 @@ STATUS_FONT_NAMES = _c["fonts"]["status"]["names"]
 STATUS_FONT_SIZE  = _c["fonts"]["status"]["size"]
 STATUS_FONT_BOLD  = _c["fonts"]["status"].get("bold", False)
 
+INTERVAL_FONT_NAMES = _c["fonts"]["interval"]["names"]
+INTERVAL_FONT_SIZE  = _c["fonts"]["interval"]["size"]
+INTERVAL_FONT_BOLD  = _c["fonts"]["interval"].get("bold", False)
+
 # --- Layout fractions ---
 SCORE_Y_FRAC       = _c["layout"]["score_y_frac"]
 LEFT_SCORE_X_FRAC  = _c["layout"]["left_score_x_frac"]
