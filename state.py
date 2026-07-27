@@ -51,6 +51,9 @@ class BoutState:
     serial_failed: bool = False
     serial_error_msg: Optional[str] = None
 
+    # Mirrors DisconnectDetector.muted so the renderer can show the mute icon
+    buzzer_muted: bool = False
+
     # Shortest/longest hit interval recorded for each fencer, measured as the
     # delta (from OP_DELTA_TIME) when that fencer was the SECOND to hit in an
     # exchange. Persist for the life of the program; never reset by a bout or
@@ -59,6 +62,11 @@ class BoutState:
     interval_max_left:  Optional[int] = None
     interval_min_right: Optional[int] = None
     interval_max_right: Optional[int] = None
+
+    # Rolling hit-interval history (up to stats.MAX_INTERVALS entries each),
+    # loaded from and persisted to stats.json. Left fencer = red, right = green.
+    intervals_red:   list = field(default_factory=list)
+    intervals_green: list = field(default_factory=list)
 
     def reset_scores(self):
         self.score_left      = 0

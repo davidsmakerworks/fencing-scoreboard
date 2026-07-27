@@ -11,6 +11,7 @@ import config
 import opcodes
 import display
 import audio
+import stats
 from state import BoutState
 from serial_reader import start_serial_reader
 
@@ -247,11 +248,18 @@ def apply_command(opcode: int, payload, state: BoutState,
                     state.interval_min_right = payload
                 if state.interval_max_right is None or payload > state.interval_max_right:
                     state.interval_max_right = payload
+                state.intervals_green.append(payload)
+                if len(state.intervals_green) > stats.MAX_INTERVALS:
+                    state.intervals_green.pop(0)
             else:
                 if state.interval_min_left is None or payload < state.interval_min_left:
                     state.interval_min_left = payload
                 if state.interval_max_left is None or payload > state.interval_max_left:
                     state.interval_max_left = payload
+                state.intervals_red.append(payload)
+                if len(state.intervals_red) > stats.MAX_INTERVALS:
+                    state.intervals_red.pop(0)
+            stats.save(state.intervals_red, state.intervals_green)
 
     elif opcode == opcodes.OP_CLOCK_START:
         state.clock_running = True
@@ -308,6 +316,7 @@ def main():
     # --- State ---
     state = BoutState()
     state.bout_win_score = config.BOUT_WIN_SCORE
+    state.intervals_red, state.intervals_green = stats.load()
     cmd_queue: queue.Queue = queue.Queue()
 
     # --- Gamepad ---
@@ -418,6 +427,9 @@ def main():
 
         # Update disconnect detector (checks silence period, clears mute if elapsed)
         detector.update(now_ms)
+        if state.buzzer_muted != detector.muted:
+            state.buzzer_muted = detector.muted
+            dirty = True
 
         # Play any queued announcement phrases that are due
         audio_mgr.update_announcements(now_ms)

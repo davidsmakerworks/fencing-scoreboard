@@ -178,10 +178,15 @@ def _draw_indicators(surface: pygame.Surface, state: BoutState, now_ms: int, sw:
     _draw_indicator_bar(surface, right_cx, white_y, bar_w, bar_h // 2, right_white_color, filled=right_white_lit)
 
 
-def _format_interval(min_ms, max_ms) -> str:
+def _format_interval(min_ms, avg_ms, max_ms) -> str:
     min_s = f"{min_ms} ms" if min_ms is not None else "--- ms"
+    avg_s = f"{avg_ms} ms" if avg_ms is not None else "--- ms"
     max_s = f"{max_ms} ms" if max_ms is not None else "--- ms"
-    return f"{min_s} / {max_s}"
+    return f"{min_s} / {avg_s} / {max_s}"
+
+
+def _avg_interval(intervals: list):
+    return round(sum(intervals) / len(intervals)) if intervals else None
 
 
 def _draw_interval_stats(surface: pygame.Surface, state: BoutState, sw: int, sh: int):
@@ -192,13 +197,47 @@ def _draw_interval_stats(surface: pygame.Surface, state: BoutState, sw: int, sh:
     left_cx  = int(config.LEFT_SCORE_X_FRAC  * sw)
     right_cx = int(config.RIGHT_SCORE_X_FRAC * sw)
 
-    left_text  = _format_interval(state.interval_min_left,  state.interval_max_left)
-    right_text = _format_interval(state.interval_min_right, state.interval_max_right)
+    # Min/max are per-session; the average comes from the persisted history
+    left_text  = _format_interval(state.interval_min_left,
+                                  _avg_interval(state.intervals_red),
+                                  state.interval_max_left)
+    right_text = _format_interval(state.interval_min_right,
+                                  _avg_interval(state.intervals_green),
+                                  state.interval_max_right)
 
     left_surf  = _render_cached("interval", left_text,  config.GRAY)
     right_surf = _render_cached("interval", right_text, config.GRAY)
     surface.blit(left_surf,  left_surf.get_rect(center=(left_cx,  text_y)))
     surface.blit(right_surf, right_surf.get_rect(center=(right_cx, text_y)))
+
+
+def _draw_mute_icon(surface: pygame.Surface, cx: int, cy: int, size: int):
+    """Yellow speaker-with-X icon shown centred between the hit indicator bars."""
+    color = config.YELLOW_BRIGHT
+    s     = size
+    left  = cx - s // 2
+
+    # Speaker box
+    box = pygame.Rect(left, cy - s // 6, s // 5, s // 3)
+    pygame.draw.rect(surface, color, box)
+
+    # Speaker cone
+    cone_x = left + s // 5
+    tip_x  = left + s // 2
+    pygame.draw.polygon(surface, color, [
+        (cone_x, cy - s // 6),
+        (tip_x,  cy - s // 2),
+        (tip_x,  cy + s // 2),
+        (cone_x, cy + s // 6),
+    ])
+
+    # X mark to the right of the cone
+    lw = max(3, s // 10)
+    x0 = tip_x + s // 8
+    x1 = cx + s // 2
+    xh = (x1 - x0) // 2
+    pygame.draw.line(surface, color, (x0, cy - xh), (x1, cy + xh), lw)
+    pygame.draw.line(surface, color, (x0, cy + xh), (x1, cy - xh), lw)
 
 
 def _draw_status_message(surface: pygame.Surface, message: str, sw: int, sh: int):
@@ -274,6 +313,11 @@ def render(surface: pygame.Surface, state: BoutState, now_ms: int):
 
     # Hit indicator bars
     _draw_indicators(surface, state, now_ms, sw, sh)
+
+    # Mute icon between the indicator bars while the buzzer is suppressed
+    if state.buzzer_muted:
+        ind_y = int(config.INDICATOR_Y_FRAC * sh)
+        _draw_mute_icon(surface, sw // 2, ind_y, int(config.INDICATOR_H_FRAC * sh))
 
     # Shortest/longest hit interval per fencer (persists across bouts)
     _draw_interval_stats(surface, state, sw, sh)
