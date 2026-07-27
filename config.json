@@ -59,7 +59,7 @@
     },
     "interval": {
       "names": ["Arial", "Liberation Sans", "DejaVu Sans", "Noto Sans", "FreeSans"],
-      "size": 38
+      "size": 32
     }
   },
 
