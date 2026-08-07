@@ -83,8 +83,8 @@
     "hit_indicator_duration_ms": 3000,
     "delta_display_ms":         10000,
     "disconnect_hit_count":     3,
-    "disconnect_window_ms":     12500,
-    "disconnect_silence_ms":    5000
+    "disconnect_window_ms":     5000,
+    "disconnect_silence_ms":    3000
   },
 
   "serial": {
